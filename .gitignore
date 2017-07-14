@@ -5,3 +5,4 @@ models/
 .ipynb_checkpoints/
 venv/
 literature/
+predictions/
