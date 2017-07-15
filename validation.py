@@ -3,7 +3,7 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
-from data_provider import convert_to_test
+from data_provider import convert_to_test, prepare_test_data
 
 
 def smape(truth, predictions):
@@ -22,8 +22,20 @@ def smape(truth, predictions):
     return r
 
 
-def validate_on_last_days(n_days):
-    pass
+def validate_last_days(data, model, n_days):
+    # type: (pd.DataFrame, Model, int) -> pd.DataFrame
+    """Train and validate the model on the last `n` days of the dataset."""
+    # Training data from first column forth, to skip the `Page` column
+    train, test = data[data.columns[1:-n_days]], data[data.columns[-n_days:]]
+    # Add the `Page` column to both train and test data
+    train['Page'] = test['Page'] = data['Page']
+
+    test = convert_to_test(test)
+    test = prepare_test_data(test)
+
+    model.fit(train)
+    prediction = model.predict(test)
+    print(prediction)
 
 
 def forward_chaining(data, folds):

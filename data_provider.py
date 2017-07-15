@@ -42,5 +42,15 @@ def convert_to_test(data):
     return test
 
 
+def prepare_test_data(data):
+    # type: (pd.DataFrame) -> pd.DataFrame
+    # Extract the date from the `Page` field and store it into `Date`
+    data['Date'] = data['Page'].apply(lambda a: a[-10:])
+    # Remove the actual date from the `Page` field
+    data['Page'] = data['Page'].apply(lambda a: a[:-11])
+
+    return data
+
+
 if __name__ == '__main__':
     fire.Fire()
