@@ -11,8 +11,12 @@ def smape(truth, predictions):
         'Ground truth and predictions must have the same shape'
     assert truth.ndim == 1, 'SMAPE expects 1d arrays on input'
 
-    result = np.sum(np.abs(truth - predictions) /
-                    ((np.abs(truth) + np.abs(predictions)) / 2))
+    # In order to ignore the true divide errors and remove nans, set errstate
+    with np.errstate(divide='ignore', invalid='ignore'):
+        result = np.abs(truth - predictions) / \
+                 ((np.abs(truth) + np.abs(predictions)) / 2)
+        result[~np.isfinite(result)] = 0
+    result = np.sum(result)
     result /= truth.shape[0]
 
     return result
