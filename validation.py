@@ -2,7 +2,6 @@ from itertools import chain
 
 import numpy as np
 import pandas as pd
-import numpy as np
 
 
 def smape(truth, predictions):
@@ -13,13 +12,11 @@ def smape(truth, predictions):
 
     # In order to ignore the true divide errors and remove nans, set errstate
     with np.errstate(divide='ignore', invalid='ignore'):
-        result = np.abs(truth - predictions) / \
-                 ((np.abs(truth) + np.abs(predictions)) / 2)
-        result[~np.isfinite(result)] = 0
-    result = np.sum(result)
-    result /= truth.shape[0]
+        r = np.abs(truth - predictions) / ((np.abs(truth) + np.abs(predictions)) / 2)
+        r[~np.isfinite(r)] = 0
+    r = np.mean(r) * 100
 
-    return result
+    return r
 
 
 def validate_on_last_days(n_days):
