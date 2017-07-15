@@ -13,7 +13,6 @@ def smape(y, y_hat):
     assert y.shape == y_hat.shape, '`y` and `y_hat` must have the same shape'
     assert y.ndim == 1, 'SMAPE expects 1d arrays on input'
 
-    # In order to ignore the true divide errors and remove nans, set errstate
     denominator = np.abs(y) + np.abs(y_hat)
     result = np.abs(y - y_hat) / denominator
     result[denominator == 0] = 0.
@@ -43,16 +42,27 @@ def forward_chaining(data, folds):
     splits = np.array_split(data.columns.values[1:], folds + 1)
 
     for i in range(1, folds):
-        train_indices = list(chain(*splits[:i]))
-        test_indices = splits[i + 1]
+        train_indices = list(chain(['Page'], *splits[:i]))
+        test_indices = list(chain(['Page'], splits[i + 1]))
         yield data[train_indices], data[test_indices]
 
 
-def validate_forward_chaining():
-    pass
+def validate_forward_chaining(data, learner, folds):
+    # type: (pd.DataFrame, Learner, int) -> float
+    """Train and validate the model using forward chaining on the dataset."""
+    scores = []
+    for train, test in forward_chaining(data, folds):
+        # Convert the test dataset into the regular format
+        test = prepare_test_data(convert_to_test(test))
+
+        prediction = learner.fit(train).predict(test)
+        scores.append(smape(prediction['Actual'], prediction['Predicted']))
+    return np.mean(scores)
 
 
 if __name__ == '__main__':
     train = pd.read_csv(TRAIN_DATA)
     train.fillna(0, inplace=True)
-    print('SMAPE: %.2f' % validate_last_days(train, LastNDaysMedianLearner()))
+    for days in range(14, 100, 7):
+        print('SMAPE (%2d days): %.2f' % (days, validate_last_days(
+            train, LastNDaysMedianLearner(days_to_consider=days))))
