@@ -2,10 +2,14 @@ import re
 
 import fire
 import pandas as pd
-from os.path import split
+from os.path import split, dirname, join
 
-TRAIN_DATA = 'data/train_1.csv'
-TEST_DATA = 'data/key_1.csv'
+DATA_DIR = join(dirname(dirname(__file__)), 'data')
+MODELS_DIR = join(dirname(dirname(__file__)), 'models')
+PREDICTIONS_DIR = join(dirname(dirname(__file__)), 'predictions')
+
+TRAIN_DATA = join(DATA_DIR, 'train_1.csv')
+TEST_DATA = join(DATA_DIR, 'key_1.csv')
 
 __LANG_REGEX = re.compile(r'([a-z]{2})\.wikipedia\.org')
 

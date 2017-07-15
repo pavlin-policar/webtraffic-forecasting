@@ -3,8 +3,8 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
-from data_provider import convert_to_test, prepare_test_data
 from models import LastNDaysMedianLearner, Learner
+from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA
 
 
 def smape(truth, predictions):
@@ -55,6 +55,6 @@ def validate_forward_chaining():
 
 
 if __name__ == '__main__':
-    train = pd.read_csv('data/train_1.csv')
+    train = pd.read_csv(TRAIN_DATA)
     train.fillna(0, inplace=True)
     validate_last_days(train, LastNDaysMedianLearner())
