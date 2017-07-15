@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from data_provider import convert_to_test, prepare_test_data
-from models import LastNDaysMedianModel
+from models import LastNDaysMedianLearner, Learner
 
 
 def smape(truth, predictions):
@@ -23,8 +23,8 @@ def smape(truth, predictions):
     return r
 
 
-def validate_last_days(data, model, n_days):
-    # type: (pd.DataFrame, Model, int) -> pd.DataFrame
+def validate_last_days(data, learner, n_days=60):
+    # type: (pd.DataFrame, Learner, Optional[int]) -> pd.DataFrame
     """Train and validate the model on the last `n` days of the dataset."""
     # Training data from first column forth, to skip the `Page` column
     train, test = data[data.columns[1:-n_days]], data[data.columns[-n_days:]]
@@ -34,9 +34,9 @@ def validate_last_days(data, model, n_days):
     test = convert_to_test(test)
     test = prepare_test_data(test)
 
-    model.fit(train)
+    model = learner.fit(train)
     prediction = model.predict(test)
-    print(prediction)
+    print('SMAPE: %.2f' % smape(prediction['Actual'], prediction['Predicted']))
 
 
 def forward_chaining(data, folds):
@@ -57,4 +57,4 @@ def validate_forward_chaining():
 if __name__ == '__main__':
     train = pd.read_csv('data/train_1.csv')
     train.fillna(0, inplace=True)
-    validate_last_days(train, LastNDaysMedianModel(), n_days=14)
+    validate_last_days(train, LastNDaysMedianLearner())
