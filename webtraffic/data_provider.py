@@ -29,7 +29,7 @@ def split_by_language(fname):
         f_parts = split(fname)
         new_fname = '%s_%s' % (lang, f_parts[-1])
         group.drop(['Language'], axis=1).to_csv(
-            '/'.join((*f_parts[:-1], new_fname)), index=False)
+            join(*f_parts[:-1], new_fname), index=False)
 
 
 def convert_to_test(data):
