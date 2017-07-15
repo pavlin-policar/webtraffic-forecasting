@@ -16,6 +16,8 @@ def get_page_language(page):
 
 
 def split_by_language(fname):
+    # type: (str) -> None
+    """Split a given file into multiple csv files by language."""
     data = pd.read_csv(fname)  # type: pd.DataFrame
     data['Language'] = data['Page'].map(get_page_language)
 

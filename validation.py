@@ -8,6 +8,7 @@ from data_provider import convert_to_test
 
 def smape(truth, predictions):
     # type: (np.ndarray, np.ndarray) -> float
+    """Symmetric mean absolute percentage error."""
     assert truth.shape == predictions.shape, \
         'Ground truth and predictions must have the same shape'
     assert truth.ndim == 1, 'SMAPE expects 1d arrays on input'
