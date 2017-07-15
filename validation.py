@@ -3,6 +3,8 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
+from data_provider import convert_to_test
+
 
 def smape(truth, predictions):
     # type: (np.ndarray, np.ndarray) -> float

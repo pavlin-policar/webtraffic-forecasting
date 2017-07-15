@@ -26,5 +26,19 @@ def split_by_language(fname):
             '/'.join((*f_parts[:-1], new_fname)), index=False)
 
 
+def convert_to_test(data):
+    # type: (pd.DataFrame) -> pd.DataFrame
+    """Convert a dataframe to the format used in the test data."""
+    test = pd.DataFrame(columns=['Page', 'Actual'])
+
+    for column in data.drop('Page', axis=1).columns:
+        new_df = data[['Page', column]]
+        new_df['Page'] = new_df['Page'].apply(lambda a: '%s_%s' % (a, column))
+        new_df.columns = ['Page', 'Actual']
+        test = test.append(new_df, ignore_index=True)
+
+    return test
+
+
 if __name__ == '__main__':
     fire.Fire()
