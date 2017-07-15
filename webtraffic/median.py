@@ -1,11 +1,15 @@
+from os.path import join
+
 import pandas as pd
 
-DAYS_TO_CONSIDER = 49
+from data_provider import TRAIN_DATA, PREDICTIONS_DIR, TEST_DATA
 
-train = pd.read_csv('data/train_1.csv')
+DAYS_TO_CONSIDER = 21
+
+train = pd.read_csv(TRAIN_DATA)
 train.fillna(0, inplace=True)
 
-test = pd.read_csv('data/key_1.csv')
+test = pd.read_csv(TEST_DATA)
 
 # Since the `Page` field looks something like this:
 # !vote_en.wikipedia.org_all-access_all-agents_2017-01-01
@@ -20,4 +24,4 @@ train['Visits'] = train[train.columns[-DAYS_TO_CONSIDER:]].median(axis=1)
 test = test.merge(train[['Page', 'Visits']], how='left')
 
 test[['Id', 'Visits']].to_csv(
-    'predictions/median_%d.csv' % DAYS_TO_CONSIDER, index=False)
+    join(PREDICTIONS_DIR, 'median_%d.csv') % DAYS_TO_CONSIDER, index=False)
