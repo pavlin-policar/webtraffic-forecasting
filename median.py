@@ -1,6 +1,8 @@
 import pandas as pd
 
-train = pd.read_csv('data/train_1.csv', index_col='Page')
+DAYS_TO_CONSIDER = 49
+
+train = pd.read_csv('data/train_1.csv')
 train.fillna(0, inplace=True)
 
 test = pd.read_csv('data/key_1.csv')
@@ -13,8 +15,9 @@ test['Date'] = test.Page.apply(lambda a: a[-10:])
 test['Page'] = test.Page.apply(lambda a: a[:-11])
 
 # Take the last 14 days and compute the median of that
-train['Visits'] = train[train.columns[-14:]].median(axis=1)
+train['Visits'] = train[train.columns[-DAYS_TO_CONSIDER:]].median(axis=1)
 
 test = test.merge(train[['Page', 'Visits']], how='left')
 
-test[['Id', 'Visits']].to_csv('predictions/median.csv', index=False)
+test[['Id', 'Visits']].to_csv(
+    'predictions/median_%d.csv' % DAYS_TO_CONSIDER, index=False)
