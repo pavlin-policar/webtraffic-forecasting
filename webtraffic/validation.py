@@ -7,20 +7,19 @@ from models import LastNDaysMedianLearner, Learner
 from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA
 
 
-def smape(truth, predictions):
+def smape(y, y_hat):
     # type: (np.ndarray, np.ndarray) -> float
     """Symmetric mean absolute percentage error."""
-    assert truth.shape == predictions.shape, \
-        'Ground truth and predictions must have the same shape'
-    assert truth.ndim == 1, 'SMAPE expects 1d arrays on input'
+    assert y.shape == y_hat.shape, '`y` and `y_hat` must have the same shape'
+    assert y.ndim == 1, 'SMAPE expects 1d arrays on input'
 
     # In order to ignore the true divide errors and remove nans, set errstate
-    with np.errstate(divide='ignore', invalid='ignore'):
-        r = np.abs(truth - predictions) / ((np.abs(truth) + np.abs(predictions)) / 2)
-        r[~np.isfinite(r)] = 0
-    r = np.mean(r) * 100
+    denominator = np.abs(y) + np.abs(y_hat)
+    result = np.abs(y - y_hat) / denominator
+    result[denominator == 0] = 0.
+    result = np.mean(result) * 200
 
-    return r
+    return result
 
 
 def validate_last_days(data, learner, n_days=60):
