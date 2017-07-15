@@ -24,7 +24,7 @@ def smape(truth, predictions):
 
 
 def validate_last_days(data, learner, n_days=60):
-    # type: (pd.DataFrame, Learner, Optional[int]) -> pd.DataFrame
+    # type: (pd.DataFrame, Learner, Optional[int]) -> float
     """Train and validate the model on the last `n` days of the dataset."""
     # Training data from first column forth, to skip the `Page` column
     train, test = data[data.columns[1:-n_days]], data[data.columns[-n_days:]]
@@ -34,9 +34,8 @@ def validate_last_days(data, learner, n_days=60):
     test = convert_to_test(test)
     test = prepare_test_data(test)
 
-    model = learner.fit(train)
-    prediction = model.predict(test)
-    print('SMAPE: %.2f' % smape(prediction['Actual'], prediction['Predicted']))
+    prediction = learner.fit(train).predict(test)
+    return smape(prediction['Actual'], prediction['Predicted'])
 
 
 def forward_chaining(data, folds):
@@ -57,4 +56,4 @@ def validate_forward_chaining():
 if __name__ == '__main__':
     train = pd.read_csv(TRAIN_DATA)
     train.fillna(0, inplace=True)
-    validate_last_days(train, LastNDaysMedianLearner())
+    print('SMAPE: %.2f' % validate_last_days(train, LastNDaysMedianLearner()))
