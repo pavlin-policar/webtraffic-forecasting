@@ -4,7 +4,7 @@ import pandas as pd
 
 from data_provider import TRAIN_DATA, PREDICTIONS_DIR, TEST_DATA
 
-DAYS_TO_CONSIDER = 98
+DAYS_TO_CONSIDER = 49
 
 train = pd.read_csv(TRAIN_DATA)
 test = pd.read_csv(TEST_DATA)
