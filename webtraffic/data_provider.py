@@ -1,8 +1,9 @@
 import re
+from os import listdir
 
 import fire
 import pandas as pd
-from os.path import split, dirname, join
+from os.path import split, dirname, join, isdir
 
 DATA_DIR = join(dirname(dirname(__file__)), 'data')
 MODELS_DIR = join(dirname(dirname(__file__)), 'models')
@@ -30,6 +31,26 @@ def split_by_language(fname):
         new_fname = '%s_%s' % (lang, f_parts[-1])
         group.drop(['Language'], axis=1).to_csv(
             join(*f_parts[:-1], new_fname), index=False)
+
+
+def save_predictions(predictions, fname):
+    # type: (pd.DataFrame, str) -> None
+    assert 'Id' in predictions.columns and 'Visits' in predictions.columns, \
+        'Data must contain the `Id` and `Visits` columns.'
+    predictions[['Id', 'Visits']].to_csv(fname, index=False)
+
+
+def combine_predictions(directory, name):
+    # type: (str, str) -> None
+    assert isdir(directory), 'The parameter must be a directory'
+
+    predictions = pd.DataFrame(columns=['Id', 'Visits'])
+    for file in listdir(directory):
+        new_predictions = pd.read_csv(file)
+        predictions = predictions.append(new_predictions, ignore_index=True)
+
+    fname = join(PREDICTIONS_DIR, '%s.csv' % name)
+    predictions.to_csv(fname, index=False)
 
 
 def convert_to_test(data):
