@@ -66,7 +66,7 @@ ja SMAPE (49 days): 60.31
 na SMAPE (49 days): 59.30
 ru SMAPE (49 days): 50.66
 zh SMAPE (49 days): 59.13
-SMAPE (49 days): 56.38
+SMAPE (49 days): 56.38    -> LB: 45.7
 
 de SMAPE (56 days): 53.27
 en SMAPE (56 days): 55.60
@@ -136,7 +136,7 @@ ja SMAPE (98 days): 60.12
 na SMAPE (98 days): 59.26
 ru SMAPE (98 days): 51.18
 zh SMAPE (98 days): 59.08
-SMAPE (98 days): 56.12
+SMAPE (98 days): 56.12    -> LB: 46.7
 
 ```
 
