@@ -36,7 +36,7 @@ def validate_last_days(data, learner, n_days=60):
 
     prediction = learner.fit(train).predict(test)
     prediction.fillna(0, inplace=True)
-    return smape(prediction['Actual'], prediction['Predicted'])
+    return smape(prediction['Actual'], prediction['Visits'])
 
 
 def forward_chaining(data, folds):
