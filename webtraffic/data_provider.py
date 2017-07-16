@@ -56,5 +56,12 @@ def prepare_test_data(data):
     return data
 
 
+def get_language_dataset(dataset, language):
+    # type: (str, str) -> str
+    parts = split(dataset)
+    new_fname = '%s_%s' % (language, parts[-1])
+    return join(*parts[:-1], new_fname)
+
+
 if __name__ == '__main__':
     fire.Fire()

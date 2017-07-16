@@ -1,10 +1,12 @@
+from collections import defaultdict
 from itertools import chain
 
 import numpy as np
 import pandas as pd
 
 from models import LastNDaysMedianLearner, Learner
-from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA
+from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA, \
+    get_language_dataset
 
 
 def smape(y, y_hat):
@@ -33,6 +35,7 @@ def validate_last_days(data, learner, n_days=60):
     test = prepare_test_data(test)
 
     prediction = learner.fit(train).predict(test)
+    prediction.fillna(0, inplace=True)
     return smape(prediction['Actual'], prediction['Predicted'])
 
 
@@ -61,8 +64,13 @@ def validate_forward_chaining(data, learner, folds):
 
 
 if __name__ == '__main__':
-    train = pd.read_csv(TRAIN_DATA)
-    train.fillna(0, inplace=True)
-    for days in range(14, 100, 7):
-        print('SMAPE (%2d days): %.2f' % (days, validate_last_days(
-            train, LastNDaysMedianLearner(days_to_consider=days))))
+    langs = ['de', 'en', 'es', 'fr', 'ja', 'na', 'ru', 'zh']
+    for days in range(56, 100, 7):
+        scores = []
+        for lang in langs:
+            train = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+            score = validate_forward_chaining(
+                train, LastNDaysMedianLearner(days_to_consider=days), 5)
+            print('%s SMAPE (%2d days): %.2f' % (lang, days, score))
+            scores.append(score)
+        print('SMAPE (%2d days): %.2f\n' % (days, np.mean(scores)))
