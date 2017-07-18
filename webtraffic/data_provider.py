@@ -40,16 +40,16 @@ def save_predictions(predictions, fname):
     predictions[['Id', 'Visits']].to_csv(fname, index=False)
 
 
-def combine_predictions(directory, name):
+def combine_predictions(directory, name='combined_predictions'):
     # type: (str, str) -> None
     assert isdir(directory), 'The parameter must be a directory'
 
     predictions = pd.DataFrame(columns=['Id', 'Visits'])
     for file in listdir(directory):
-        new_predictions = pd.read_csv(file)
+        new_predictions = pd.read_csv(join(directory, file))
         predictions = predictions.append(new_predictions, ignore_index=True)
 
-    fname = join(PREDICTIONS_DIR, '%s.csv' % name)
+    fname = join(directory, '%s.csv' % name)
     predictions.to_csv(fname, index=False)
 
 
@@ -82,7 +82,7 @@ def get_language_dataset(dataset, language):
     # type: (str, str) -> str
     parts = split(dataset)
     new_fname = '%s_%s' % (language, parts[-1])
-    return join(*parts[:-1], new_fname)
+    return join(*parts[:-1], 'lang', new_fname)
 
 
 if __name__ == '__main__':
