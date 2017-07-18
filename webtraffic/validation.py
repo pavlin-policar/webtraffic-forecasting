@@ -7,7 +7,8 @@ from functools import partial
 from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA, \
     get_language_dataset
 from imputation import sliding_window_median_imputation, perform_imputation
-from models import LastNDaysMedianLearner, Learner
+from models import LastNDaysMedianLearner, Learner, \
+    LastNDaysMedianWithWeekenedLearner
 
 
 def smape(y, y_hat):
@@ -24,7 +25,7 @@ def smape(y, y_hat):
     return result
 
 
-def validate_last_days(data, learner, n_days=60):
+def validate_last_n_days(data, learner, n_days=60):
     # type: (pd.DataFrame, Learner, Optional[int]) -> float
     """Train and validate the model on the last `n` days of the dataset."""
     # Training data from first column forth, to skip the `Page` column
@@ -60,26 +61,28 @@ def validate_forward_chaining(data, learner, folds):
         test = prepare_test_data(convert_to_test(test))
 
         prediction = learner.fit(train).predict(test)
+        prediction.fillna(0, inplace=True)
         scores.append(smape(prediction['Actual'], prediction['Visits']))
     return np.mean(scores)
 
 
 if __name__ == '__main__':
     langs = ['de', 'en', 'es', 'fr', 'ja', 'na', 'ru', 'zh']
-    for days in range(14, 71, 7):
-        scores = []
-        for lang in langs:
-            train = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
-            imputation = partial(sliding_window_median_imputation,
-                                 window_size=2)
-            train = perform_imputation(train, imputation)
+    scores = []
+    for lang in langs:
+        train = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+        # imputation = partial(sliding_window_median_imputation,
+        #                      window_size=2)
+        # train = perform_imputation(train, imputation)
 
-            score = validate_forward_chaining(
-                train, LastNDaysMedianLearner(days_to_consider=days), 5)
+        score = validate_last_n_days(
+            train, LastNDaysMedianLearner(days_to_consider=49), 5)
+        # score = validate_last_n_days(
+        #     train, LastNDaysMedianWithWeekenedLearner(days_to_consider=49))
 
-            # score = validate_last_days(
-            #     train, LastNDaysMedianLearner(days_to_consider=days))
+        # score = validate_last_days(
+        #     train, LastNDaysMedianLearner(days_to_consider=days))
 
-            print('%s SMAPE (%2d days): %.2f' % (lang, days, score))
-            scores.append(score)
-        print('SMAPE (%2d days): %.2f\n' % (days, np.mean(scores)))
+        print('%s SMAPE (%2d days): %.2f' % (lang, 49, score))
+        scores.append(score)
+    print('SMAPE (%2d days): %.2f\n' % (49, np.mean(scores)))
