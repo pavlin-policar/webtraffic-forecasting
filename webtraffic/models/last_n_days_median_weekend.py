@@ -1,9 +1,10 @@
 import re
 
+import fire
 import numpy as np
 import pandas as pd
 
-from models import Learner, Model
+from models import Learner, Model, Delegator
 
 
 class LastNDaysMedianWithWeekenedLearner(Learner):
@@ -36,3 +37,6 @@ class MedianWithWeekenedModel(Model):
         data = data.merge(self.data[['Page', 'Visits']], how='left')
 
         return data
+
+if __name__ == '__main__':
+    fire.Fire(Delegator(LastNDaysMedianWithWeekenedLearner))

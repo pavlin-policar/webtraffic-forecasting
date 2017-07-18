@@ -1,4 +1,6 @@
-from models import Learner, Model
+import fire
+
+from models import Learner, Model, Delegator
 
 
 class LastNDaysMedianLearner(Learner):
@@ -19,3 +21,7 @@ class MedianModel(Model):
     def predict(self, data):
         data = data.merge(self.data[['Page', 'Visits']], how='left')
         return data
+
+
+if __name__ == '__main__':
+    fire.Fire(Delegator(LastNDaysMedianLearner))

@@ -3,12 +3,7 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
-from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA, \
-    get_language_dataset
-from models import Learner
-from models.last_n_days_median import LastNDaysMedianLearner
-from models.last_n_days_median_weekend import \
-    LastNDaysMedianWithWeekenedLearner
+from data_provider import convert_to_test, prepare_test_data
 
 
 def smape(y, y_hat):
@@ -64,25 +59,3 @@ def validate_forward_chaining(data, learner, folds):
         prediction.fillna(0, inplace=True)
         scores.append(smape(prediction['Actual'], prediction['Visits']))
     return np.mean(scores)
-
-
-if __name__ == '__main__':
-    langs = ['de', 'en', 'es', 'fr', 'ja', 'na', 'ru', 'zh']
-    scores = []
-    for lang in langs:
-        train = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
-        # imputation = partial(sliding_window_median_imputation,
-        #                      window_size=2)
-        # train = perform_imputation(train, imputation)
-
-        score = validate_last_n_days(
-            train, LastNDaysMedianLearner(days_to_consider=49), 5)
-        # score = validate_last_n_days(
-        #     train, LastNDaysMedianWithWeekenedLearner(days_to_consider=49))
-
-        # score = validate_last_days(
-        #     train, LastNDaysMedianLearner(days_to_consider=days))
-
-        print('%s SMAPE (%2d days): %.2f' % (lang, 49, score))
-        scores.append(score)
-    print('SMAPE (%2d days): %.2f\n' % (49, np.mean(scores)))
