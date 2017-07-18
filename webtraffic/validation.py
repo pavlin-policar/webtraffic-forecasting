@@ -2,12 +2,12 @@ from itertools import chain
 
 import numpy as np
 import pandas as pd
-from functools import partial
 
 from data_provider import convert_to_test, prepare_test_data, TRAIN_DATA, \
     get_language_dataset
-from imputation import sliding_window_median_imputation, perform_imputation
-from models import LastNDaysMedianLearner, Learner, \
+from models import Learner
+from models.last_n_days_median import LastNDaysMedianLearner
+from models.last_n_days_median_weekend import \
     LastNDaysMedianWithWeekenedLearner
 
 
