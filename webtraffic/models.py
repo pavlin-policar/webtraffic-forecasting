@@ -1,14 +1,15 @@
 from abc import abstractmethod, ABCMeta
+from datetime import date
+from os import listdir, makedirs
+from os.path import isdir, join, exists, split
 
 import numpy as np
 import pandas as pd
-from os.path import isdir, join, dirname, exists, split
-
-from os import listdir, makedirs
 
 from data_provider import get_language_dataset, TRAIN_DATA, prepare_test_data, \
     PREDICTIONS_DIR, save_predictions
-from validation import validate_last_n_days, validate_forward_chaining
+from validation import validate_last_n_days, validate_forward_chaining, \
+    validate_time_period
 
 
 class Learner(metaclass=ABCMeta):
@@ -74,3 +75,17 @@ class Delegator(metaclass=ABCMeta):
             print('%s SMAPE: %.2f' % (lang, score))
             scores.append(score)
         print('SMAPE: %.2f\n' % np.mean(scores))
+
+    def validate_tp(self, **kwargs):
+        langs = ['de', 'en', 'es', 'fr', 'ja', 'na', 'ru', 'zh']
+        scores = []
+        learner = self.learner_cls(**kwargs)
+
+        for lang in langs:
+            data = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+            start, end = date(2016, 1, 1), date(2016, 3, 1)
+            score = validate_time_period(data, learner, start, end)
+            print('%s SMAPE: %.2f' % (lang, score))
+            scores.append(score)
+        print('SMAPE: %.2f\n' % np.mean(scores))
+

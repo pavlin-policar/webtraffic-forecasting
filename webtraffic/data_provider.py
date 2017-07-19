@@ -82,7 +82,12 @@ def get_language_dataset(dataset, language):
     # type: (str, str) -> str
     parts = split(dataset)
     new_fname = '%s_%s' % (language, parts[-1])
-    return join(*parts[:-1], 'lang', new_fname)
+    return join(*parts[:-1], 'langs', new_fname)
+
+
+def get_date_columns(data):
+    # type: (pd.DataFrame) -> List[str]
+    return [c for c in data.columns if re.match(r'\d{4}-\d{2}-\d{2}', c)]
 
 
 if __name__ == '__main__':

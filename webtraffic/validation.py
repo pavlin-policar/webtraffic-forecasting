@@ -1,9 +1,10 @@
+from datetime import date
 from itertools import chain
 
 import numpy as np
 import pandas as pd
 
-from data_provider import convert_to_test, prepare_test_data
+from data_provider import convert_to_test, prepare_test_data, get_date_columns
 
 
 def smape(y, y_hat):
@@ -59,3 +60,26 @@ def validate_forward_chaining(data, learner, folds):
         prediction.fillna(0, inplace=True)
         scores.append(smape(prediction['Actual'], prediction['Visits']))
     return np.mean(scores)
+
+
+def validate_time_period(data, learner, start, end):
+    # type: (pd.DataFrame, Learner, date, date) -> float
+    date_columns = [date(*(int(x) for x in c.split('-')))
+                    for c in get_date_columns(data)]
+
+    assert start in date_columns, 'Starting date must be present in the data.'
+    assert end in date_columns, 'Ending date must be present in the data.'
+
+    training_dates = [c for c in date_columns if c < start]
+    testing_dates = [c for c in date_columns if start <= c <= end]
+
+    training_cols = ['%d-%02d-%02d' % (d.year, d.month, d.day) for d in training_dates]
+    testing_cols = ['%d-%02d-%02d' % (d.year, d.month, d.day) for d in testing_dates]
+
+    train, test = data[['Page'] + training_cols], data[['Page'] + testing_cols]
+    test = convert_to_test(test)
+    test = prepare_test_data(test)
+
+    prediction = learner.fit(train).predict(test)
+    prediction.fillna(0, inplace=True)
+    return smape(prediction['Actual'], prediction['Visits'])

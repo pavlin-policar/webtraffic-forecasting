@@ -1,9 +1,8 @@
-import re
-
 import fire
 import numpy as np
 import pandas as pd
 
+from data_provider import get_date_columns
 from models import Learner, Model, Delegator
 
 
@@ -12,7 +11,7 @@ class LastNDaysMedianWithWeekenedLearner(Learner):
         self.days_to_consider = days_to_consider
 
     def fit(self, data):
-        date_columns = [c for c in data.columns if re.match(r'\d{4}-\d{2}-\d{2}', c)]
+        date_columns = get_date_columns(data)
         data = pd.melt(
             data[date_columns[-self.days_to_consider:] + ['Page']],
             id_vars='Page', var_name='date', value_name='Visits',
