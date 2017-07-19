@@ -4,7 +4,7 @@ from models import Learner, Model, Delegator
 
 
 class LastNDaysMedianLearner(Learner):
-    def __init__(self, days_to_consider=49):
+    def __init__(self, days_to_consider=56):
         self.days_to_consider = days_to_consider
 
     def fit(self, data):

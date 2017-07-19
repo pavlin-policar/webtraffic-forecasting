@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from data_provider import get_language_dataset, TRAIN_DATA, prepare_test_data, \
-    PREDICTIONS_DIR, save_predictions
+    PREDICTIONS_DIR, save_predictions, get_date_columns
 from validation import validate_last_n_days, validate_forward_chaining, \
     validate_time_period
 
@@ -29,10 +29,8 @@ class Delegator(metaclass=ABCMeta):
         self.learner_cls = learner_cls
         self.cv_params = cv_params or {}
 
-    def make_predictions(self, name, train, test=None, **kwargs):
-        # Create an instance of the learner
-        learner = self.learner_cls(**kwargs)
-
+    @staticmethod
+    def _parse_prediction_files(name, train, test, learner):
         if isdir(train):
             training_data = sorted(join(train, f) for f in listdir(train) if 'train_1' in f)
             testing_data = sorted(join(train, f) for f in listdir(train) if 'key_1' in f)
@@ -46,9 +44,44 @@ class Delegator(metaclass=ABCMeta):
         if not exists(base_dir):
             makedirs(base_dir)
 
+        return training_data, testing_data, base_dir
+
+    def make_predictions(self, name, train, test=None, **kwargs):
+        learner = self.learner_cls(**kwargs)
+        training_data, testing_data, base_dir = self._parse_prediction_files(
+            name, train, test, learner)
+
         for ftrain, ftest in zip(training_data, testing_data):
             model = learner.fit(pd.read_csv(ftrain))
             predictions = model.predict(prepare_test_data(pd.read_csv(ftest)))
+
+            new_fname = join(base_dir, '%s.csv' % split(ftrain)[-1][:2])
+            save_predictions(predictions, new_fname)
+
+    def make_predictions_time_period(self, name, train, test=None, **kwargs):
+        """Make predictions using only training data up to a cutoff date."""
+        learner = self.learner_cls(**kwargs)
+        training_data, testing_data, base_dir = self._parse_prediction_files(
+            name, train, test, learner)
+
+        for ftrain, ftest in zip(training_data, testing_data):
+            train = pd.read_csv(ftrain)
+            date_columns = [date(*(int(x) for x in c.split('-')))
+                            for c in get_date_columns(train)]
+
+            cutoff_date = date(2016, 1, 1)
+            assert cutoff_date in date_columns, \
+                'Starting date must be present in the data.'
+
+            training_dates = [c for c in date_columns if c < cutoff_date]
+            training_cols = ['%d-%02d-%02d' % (d.year, d.month, d.day)
+                             for d in training_dates]
+
+            model = learner.fit(train[['Page'] + training_cols])
+
+            test = prepare_test_data(pd.read_csv(ftest))
+            predictions = model.predict(test)
+            predictions.fillna(0, inplace=True)
 
             new_fname = join(base_dir, '%s.csv' % split(ftrain)[-1][:2])
             save_predictions(predictions, new_fname)
