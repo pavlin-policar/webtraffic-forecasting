@@ -68,6 +68,12 @@ def validate_forward_chaining(data, learner, folds):
 
 def validate_time_period(data, learner, start, end):
     # type: (pd.DataFrame, Learner, date, date) -> float
+    """Validate the learner on a time period on the data.
+
+    Only train on the data before the starting date, and predict on the entire
+    time period given.
+
+    """
     date_columns = [date(*(int(x) for x in c.split('-')))
                     for c in get_date_columns(data)]
 
