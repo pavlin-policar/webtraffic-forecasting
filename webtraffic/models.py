@@ -105,6 +105,7 @@ class Delegator(metaclass=ABCMeta):
 
         for lang in langs:
             data = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+            data = self._perform_imputation(data)
             score = validate_last_n_days(data, learner, n_days)
             print('%s SMAPE: %.2f' % (lang, score))
             scores.append(score)
@@ -117,6 +118,7 @@ class Delegator(metaclass=ABCMeta):
 
         for lang in langs:
             data = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+            data = self._perform_imputation(data)
             score = validate_forward_chaining(data, learner, folds)
             print('%s SMAPE: %.2f' % (lang, score))
             scores.append(score)
