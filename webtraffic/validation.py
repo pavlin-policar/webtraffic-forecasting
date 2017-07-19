@@ -6,6 +6,10 @@ import pandas as pd
 
 from data_provider import convert_to_test, prepare_test_data, get_date_columns
 
+import logging
+
+logger = logging.getLogger('VALIDATION')
+
 
 def smape(y, y_hat):
     # type: (np.ndarray, np.ndarray) -> float
@@ -75,6 +79,9 @@ def validate_time_period(data, learner, start, end):
 
     training_cols = ['%d-%02d-%02d' % (d.year, d.month, d.day) for d in training_dates]
     testing_cols = ['%d-%02d-%02d' % (d.year, d.month, d.day) for d in testing_dates]
+
+    logger.info('Training on %d columns, testing on %d columns' %
+                (len(training_cols), len(testing_cols)))
 
     train, test = data[['Page'] + training_cols], data[['Page'] + testing_cols]
     test = convert_to_test(test)
