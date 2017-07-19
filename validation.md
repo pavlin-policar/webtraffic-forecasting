@@ -444,3 +444,153 @@ ru SMAPE: 40.27
 zh SMAPE: 46.69
 SMAPE: 45.50
 ```
+
+
+#### Median with weekends separate, bfill imputation
+Apply separate medians to Saturdays and Sundays.
+Pandas `bfill` imputation before median is computed.
+```
+days_to_consider: 14
+de SMAPE: 46.49
+en SMAPE: 43.82
+es SMAPE: 67.85
+fr SMAPE: 46.72
+ja SMAPE: 45.64
+na SMAPE: 48.87
+ru SMAPE: 39.01
+zh SMAPE: 43.18
+SMAPE: 47.70
+
+days_to_consider: 21
+de SMAPE: 44.21
+en SMAPE: 42.35
+es SMAPE: 64.41
+fr SMAPE: 44.79
+ja SMAPE: 44.29
+na SMAPE: 47.13
+ru SMAPE: 38.07
+zh SMAPE: 42.83
+SMAPE: 46.01
+
+days_to_consider: 28
+de SMAPE: 43.07
+en SMAPE: 41.39
+es SMAPE: 56.77
+fr SMAPE: 43.94
+ja SMAPE: 44.11
+na SMAPE: 46.75
+ru SMAPE: 37.75
+zh SMAPE: 42.85
+SMAPE: 44.58
+
+days_to_consider: 35
+de SMAPE: 42.51
+en SMAPE: 41.30
+es SMAPE: 51.11
+fr SMAPE: 43.28
+ja SMAPE: 43.95
+na SMAPE: 46.19
+ru SMAPE: 37.74
+zh SMAPE: 43.16
+SMAPE: 43.65
+
+days_to_consider: 42
+de SMAPE: 42.16
+en SMAPE: 41.51
+es SMAPE: 49.44
+fr SMAPE: 43.18
+ja SMAPE: 43.77
+na SMAPE: 46.13
+ru SMAPE: 37.92
+zh SMAPE: 43.44
+SMAPE: 43.44
+
+days_to_consider: 49
+de SMAPE: 42.13
+en SMAPE: 41.71
+es SMAPE: 48.52
+fr SMAPE: 43.51
+ja SMAPE: 43.68
+na SMAPE: 45.89
+ru SMAPE: 38.16
+zh SMAPE: 43.87
+SMAPE: 43.43
+
+days_to_consider: 56
+de SMAPE: 42.11
+en SMAPE: 41.84
+es SMAPE: 47.93
+fr SMAPE: 43.30
+ja SMAPE: 43.62
+na SMAPE: 45.95
+ru SMAPE: 38.25
+zh SMAPE: 44.20
+SMAPE: 43.40   -> 45.3
+
+days_to_consider: 63
+de SMAPE: 42.13
+en SMAPE: 42.00
+es SMAPE: 47.63
+fr SMAPE: 43.23
+ja SMAPE: 43.75
+na SMAPE: 45.91
+ru SMAPE: 38.39
+zh SMAPE: 44.53
+SMAPE: 43.45
+
+days_to_consider: 70
+de SMAPE: 42.13
+en SMAPE: 42.18
+es SMAPE: 47.45
+fr SMAPE: 43.24
+ja SMAPE: 43.95
+na SMAPE: 46.14
+ru SMAPE: 38.71
+zh SMAPE: 44.98
+SMAPE: 43.60
+
+days_to_consider: 77
+de SMAPE: 42.15
+en SMAPE: 42.33
+es SMAPE: 47.38
+fr SMAPE: 43.30
+ja SMAPE: 44.04
+na SMAPE: 46.40
+ru SMAPE: 39.06
+zh SMAPE: 45.22
+SMAPE: 43.74
+
+days_to_consider: 84
+de SMAPE: 42.26
+en SMAPE: 42.60
+es SMAPE: 47.33
+fr SMAPE: 43.38
+ja SMAPE: 44.08
+na SMAPE: 46.79
+ru SMAPE: 39.45
+zh SMAPE: 45.41
+SMAPE: 43.91
+
+days_to_consider: 91
+de SMAPE: 42.34
+en SMAPE: 42.82
+es SMAPE: 47.35
+fr SMAPE: 43.50
+ja SMAPE: 44.19
+na SMAPE: 47.13
+ru SMAPE: 39.81
+zh SMAPE: 45.59
+SMAPE: 44.09
+
+days_to_consider: 98
+de SMAPE: 42.51
+en SMAPE: 43.10
+es SMAPE: 47.42
+fr SMAPE: 43.65
+ja SMAPE: 44.17
+na SMAPE: 47.71
+ru SMAPE: 40.14
+zh SMAPE: 45.69
+SMAPE: 44.30
+
+```
