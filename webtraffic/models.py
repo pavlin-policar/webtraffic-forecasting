@@ -54,6 +54,7 @@ class Delegator(metaclass=ABCMeta):
         for ftrain, ftest in zip(training_data, testing_data):
             model = learner.fit(pd.read_csv(ftrain))
             predictions = model.predict(prepare_test_data(pd.read_csv(ftest)))
+            predictions.fillna(0, inplace=True)
 
             new_fname = join(base_dir, '%s.csv' % split(ftrain)[-1][:2])
             save_predictions(predictions, new_fname)
