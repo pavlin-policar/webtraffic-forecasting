@@ -1,142 +1,153 @@
 # Validation
 
-## Test on last 60 days
-
-
-## Forward chaining
+## Validate on same months previous year
 #### Median
 Apply imputation after median is computed.
 
 ```
-de SMAPE (14 days): 54.96
-en SMAPE (14 days): 55.97
-es SMAPE (14 days): 63.19
-fr SMAPE (14 days): 57.67
-ja SMAPE (14 days): 56.76
-na SMAPE (14 days): 59.63
-ru SMAPE (14 days): 52.25
-zh SMAPE (14 days): 59.26
-SMAPE (14 days): 57.46
+days_to_consider: 14
+de SMAPE: 46.81
+en SMAPE: 46.61
+es SMAPE: 68.13
+fr SMAPE: 46.83
+ja SMAPE: 45.79
+na SMAPE: 53.39
+ru SMAPE: 39.27
+zh SMAPE: 44.26
+SMAPE: 48.89
 
-de SMAPE (21 days): 54.24
-en SMAPE (21 days): 55.56
-es SMAPE (21 days): 61.57
-fr SMAPE (21 days): 56.89
-ja SMAPE (21 days): 56.42
-na SMAPE (21 days): 59.32
-ru SMAPE (21 days): 51.66
-zh SMAPE (21 days): 58.94
-SMAPE (21 days): 56.83
+days_to_consider: 21
+de SMAPE: 45.12
+en SMAPE: 45.40
+es SMAPE: 64.69
+fr SMAPE: 45.19
+ja SMAPE: 44.88
+na SMAPE: 52.83
+ru SMAPE: 38.41
+zh SMAPE: 44.08
+SMAPE: 47.57
 
-de SMAPE (28 days): 53.90
-en SMAPE (28 days): 55.47
-es SMAPE (28 days): 59.71
-fr SMAPE (28 days): 56.64
-ja SMAPE (28 days): 56.92
-na SMAPE (28 days): 59.51
-ru SMAPE (28 days): 51.31
-zh SMAPE (28 days): 58.78
-SMAPE (28 days): 56.53
+days_to_consider: 28
+de SMAPE: 44.31
+en SMAPE: 44.83
+es SMAPE: 58.21
+fr SMAPE: 44.57
+ja SMAPE: 44.73
+na SMAPE: 52.52
+ru SMAPE: 38.24
+zh SMAPE: 44.13
+SMAPE: 46.44
 
-de SMAPE (35 days): 53.70
-en SMAPE (35 days): 55.53
-es SMAPE (35 days): 58.17
-fr SMAPE (35 days): 56.41
-ja SMAPE (35 days): 59.79
-na SMAPE (35 days): 59.49
-ru SMAPE (35 days): 51.00
-zh SMAPE (35 days): 58.87
-SMAPE (35 days): 56.62
+days_to_consider: 35
+de SMAPE: 43.80
+en SMAPE: 44.84
+es SMAPE: 53.37
+fr SMAPE: 44.11
+ja SMAPE: 44.67
+na SMAPE: 52.03
+ru SMAPE: 38.46
+zh SMAPE: 44.41
+SMAPE: 45.71
 
-de SMAPE (42 days): 53.48
-en SMAPE (42 days): 55.58
-es SMAPE (42 days): 57.12
-fr SMAPE (42 days): 56.25
-ja SMAPE (42 days): 60.16
-na SMAPE (42 days): 59.47
-ru SMAPE (42 days): 50.83
-zh SMAPE (42 days): 59.02
-SMAPE (42 days): 56.49
+days_to_consider: 42
+de SMAPE: 43.46
+en SMAPE: 44.98
+es SMAPE: 50.84
+fr SMAPE: 44.00
+ja SMAPE: 44.44
+na SMAPE: 51.90
+ru SMAPE: 38.67
+zh SMAPE: 44.67
+SMAPE: 45.37
 
-de SMAPE (49 days): 53.32
-en SMAPE (49 days): 55.61
-es SMAPE (49 days): 56.57
-fr SMAPE (49 days): 56.18
-ja SMAPE (49 days): 60.31
-na SMAPE (49 days): 59.30
-ru SMAPE (49 days): 50.66
-zh SMAPE (49 days): 59.13
-SMAPE (49 days): 56.38    -> LB: 45.7
+days_to_consider: 49
+de SMAPE: 43.44
+en SMAPE: 45.14
+es SMAPE: 49.87
+fr SMAPE: 44.36
+ja SMAPE: 44.42
+na SMAPE: 51.91
+ru SMAPE: 38.89
+zh SMAPE: 45.15
+SMAPE: 45.40
 
-de SMAPE (56 days): 53.27
-en SMAPE (56 days): 55.60
-es SMAPE (56 days): 56.09
-fr SMAPE (56 days): 56.20
-ja SMAPE (56 days): 60.38
-na SMAPE (56 days): 59.31
-ru SMAPE (56 days): 50.74
-zh SMAPE (56 days): 59.22
-SMAPE (56 days): 56.35
+days_to_consider: 56
+de SMAPE: 43.42
+en SMAPE: 45.19
+es SMAPE: 49.24
+fr SMAPE: 44.15
+ja SMAPE: 44.38
+na SMAPE: 51.91
+ru SMAPE: 38.93
+zh SMAPE: 45.46
+SMAPE: 45.33
 
-de SMAPE (63 days): 53.28
-en SMAPE (63 days): 55.64
-es SMAPE (63 days): 55.86
-fr SMAPE (63 days): 56.46
-ja SMAPE (63 days): 60.50
-na SMAPE (63 days): 59.28
-ru SMAPE (63 days): 51.30
-zh SMAPE (63 days): 59.30
-SMAPE (63 days): 56.45
+days_to_consider: 63
+de SMAPE: 43.44
+en SMAPE: 45.33
+es SMAPE: 49.04
+fr SMAPE: 44.11
+ja SMAPE: 44.54
+na SMAPE: 51.98
+ru SMAPE: 39.02
+zh SMAPE: 45.81
+SMAPE: 45.41
 
-de SMAPE (70 days): 53.22
-en SMAPE (70 days): 55.61
-es SMAPE (70 days): 55.56
-fr SMAPE (70 days): 56.49
-ja SMAPE (70 days): 60.49
-na SMAPE (70 days): 59.24
-ru SMAPE (70 days): 51.56
-zh SMAPE (70 days): 59.31
-SMAPE (70 days): 56.43
+days_to_consider: 70
+de SMAPE: 43.43
+en SMAPE: 45.55
+es SMAPE: 48.71
+fr SMAPE: 44.07
+ja SMAPE: 44.73
+na SMAPE: 52.12
+ru SMAPE: 39.23
+zh SMAPE: 46.16
+SMAPE: 45.50
 
-de SMAPE (77 days): 53.16
-en SMAPE (77 days): 55.55
-es SMAPE (77 days): 55.30
-fr SMAPE (77 days): 56.43
-ja SMAPE (77 days): 60.42
-na SMAPE (77 days): 59.24
-ru SMAPE (77 days): 51.39
-zh SMAPE (77 days): 59.21
-SMAPE (77 days): 56.34
+days_to_consider: 77
+de SMAPE: 43.48
+en SMAPE: 45.69
+es SMAPE: 48.57
+fr SMAPE: 44.15
+ja SMAPE: 44.82
+na SMAPE: 52.18
+ru SMAPE: 39.53
+zh SMAPE: 46.40
+SMAPE: 45.60
 
-de SMAPE (84 days): 53.11
-en SMAPE (84 days): 55.44
-es SMAPE (84 days): 55.14
-fr SMAPE (84 days): 56.43
-ja SMAPE (84 days): 60.32
-na SMAPE (84 days): 59.27
-ru SMAPE (84 days): 51.31
-zh SMAPE (84 days): 59.11
-SMAPE (84 days): 56.27
+days_to_consider: 84
+de SMAPE: 43.54
+en SMAPE: 45.86
+es SMAPE: 48.47
+fr SMAPE: 44.22
+ja SMAPE: 44.88
+na SMAPE: 52.36
+ru SMAPE: 39.80
+zh SMAPE: 46.51
+SMAPE: 45.70
 
-de SMAPE (91 days): 53.07
-en SMAPE (91 days): 55.35
-es SMAPE (91 days): 55.01
-fr SMAPE (91 days): 56.37
-ja SMAPE (91 days): 60.24
-na SMAPE (91 days): 59.25
-ru SMAPE (91 days): 51.36
-zh SMAPE (91 days): 59.11
-SMAPE (91 days): 56.22
+days_to_consider: 91
+de SMAPE: 43.58
+en SMAPE: 46.05
+es SMAPE: 48.48
+fr SMAPE: 44.31
+ja SMAPE: 45.00
+na SMAPE: 52.52
+ru SMAPE: 40.12
+zh SMAPE: 46.66
+SMAPE: 45.84
 
-de SMAPE (98 days): 52.93
-en SMAPE (98 days): 55.29
-es SMAPE (98 days): 54.83
-fr SMAPE (98 days): 56.28
-ja SMAPE (98 days): 60.12
-na SMAPE (98 days): 59.26
-ru SMAPE (98 days): 51.18
-zh SMAPE (98 days): 59.08
-SMAPE (98 days): 56.12    -> LB: 46.7
-
+days_to_consider: 98
+de SMAPE: 43.71
+en SMAPE: 46.29
+es SMAPE: 48.55
+fr SMAPE: 44.44
+ja SMAPE: 44.99
+na SMAPE: 52.69
+ru SMAPE: 40.41
+zh SMAPE: 46.68
+SMAPE: 45.97
 ```
 
+#### Median with weekends separate
+Apply imputation after median is computed.
