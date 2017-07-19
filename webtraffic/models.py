@@ -48,8 +48,14 @@ class Delegator(metaclass=ABCMeta):
 
     @staticmethod
     def _perform_imputation(data):
-        date_cols = get_date_columns(data)
-        data[date_cols] = data[date_cols].fillna(method='bfill', axis=1)
+        """Perform initial imputation on data.
+
+        Notes
+        -----
+          - Pandas `bfill` imputation produces better validation results, but
+            performs worse on LB
+
+        """
         return data
 
     def make_predictions(self, name, train, test=None, **kwargs):
