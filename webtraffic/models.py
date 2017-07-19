@@ -46,13 +46,22 @@ class Delegator(metaclass=ABCMeta):
 
         return training_data, testing_data, base_dir
 
+    @staticmethod
+    def _perform_imputation(data):
+        date_cols = get_date_columns(data)
+        data[date_cols] = data[date_cols].fillna(method='bfill', axis=1)
+        return data
+
     def make_predictions(self, name, train, test=None, **kwargs):
         learner = self.learner_cls(**kwargs)
         training_data, testing_data, base_dir = self._parse_prediction_files(
             name, train, test, learner)
 
         for ftrain, ftest in zip(training_data, testing_data):
-            model = learner.fit(pd.read_csv(ftrain))
+            train = pd.read_csv(ftrain)
+            train = self._perform_imputation(train)
+
+            model = learner.fit(train)
             predictions = model.predict(prepare_test_data(pd.read_csv(ftest)))
             predictions.fillna(0, inplace=True)
 
@@ -67,6 +76,8 @@ class Delegator(metaclass=ABCMeta):
 
         for ftrain, ftest in zip(training_data, testing_data):
             train = pd.read_csv(ftrain)
+            train = self._perform_imputation(train)
+
             date_columns = [date(*(int(x) for x in c.split('-')))
                             for c in get_date_columns(train)]
 
@@ -118,6 +129,8 @@ class Delegator(metaclass=ABCMeta):
 
         for lang in langs:
             data = pd.read_csv(get_language_dataset(TRAIN_DATA, lang))
+            data = self._perform_imputation(data)
+
             start, end = date(2016, 1, 1), date(2016, 3, 1)
             score = validate_time_period(data, learner, start, end)
             print('%s SMAPE: %.2f' % (lang, score))
