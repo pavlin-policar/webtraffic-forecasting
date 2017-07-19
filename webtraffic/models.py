@@ -25,8 +25,9 @@ class Model(metaclass=ABCMeta):
 
 
 class Delegator(metaclass=ABCMeta):
-    def __init__(self, learner_cls):
+    def __init__(self, learner_cls, cv_params=None):
         self.learner_cls = learner_cls
+        self.cv_params = cv_params or {}
 
     def make_predictions(self, name, train, test=None, **kwargs):
         # Create an instance of the learner
@@ -88,4 +89,10 @@ class Delegator(metaclass=ABCMeta):
             print('%s SMAPE: %.2f' % (lang, score))
             scores.append(score)
         print('SMAPE: %.2f\n' % np.mean(scores))
+
+    def cross_validate(self, method):
+        for key, value_set in self.cv_params.items():
+            for value in value_set:
+                print('%s: %s' % (key, value))
+                getattr(self, method)(**{key: value})
 

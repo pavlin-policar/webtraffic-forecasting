@@ -24,4 +24,6 @@ class MedianModel(Model):
 
 
 if __name__ == '__main__':
-    fire.Fire(Delegator(LastNDaysMedianLearner))
+    fire.Fire(Delegator(LastNDaysMedianLearner, cv_params={
+        'days_to_consider': range(14, 100, 7),
+    }))
