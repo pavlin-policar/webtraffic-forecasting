@@ -7,7 +7,7 @@ from models import Learner, Model, Delegator
 
 
 class LastNDaysMedianWithWeekenedLearner(Learner):
-    def __init__(self, days_to_consider=49):
+    def __init__(self, days_to_consider=56):
         self.days_to_consider = days_to_consider
 
     def fit(self, data):
@@ -33,9 +33,11 @@ class MedianWithWeekenedModel(Model):
     def predict(self, data):
         data['weekend'] = (data.date.dt.dayofweek // 5 == 1).astype(np.float64)
 
-        data = data.merge(self.data[['Page', 'Visits']], how='left')
+        data = data.merge(self.data, how='left')
 
         return data
 
 if __name__ == '__main__':
-    fire.Fire(Delegator(LastNDaysMedianWithWeekenedLearner))
+    fire.Fire(Delegator(LastNDaysMedianWithWeekenedLearner, cv_params={
+        'days_to_consider': range(14, 100, 7),
+    }))
