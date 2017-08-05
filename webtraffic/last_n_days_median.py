@@ -1,9 +1,9 @@
 import fire
 
-from models import Learner, Model, Delegator
+from models import TSLearner, TSModel, TSDelegator
 
 
-class LastNDaysMedianLearner(Learner):
+class LastNDaysMedianLearner(TSLearner):
     def __init__(self, days_to_consider=56):
         self.days_to_consider = days_to_consider
 
@@ -12,7 +12,7 @@ class LastNDaysMedianLearner(Learner):
         return MedianModel(data[['Page', 'Visits']])
 
 
-class MedianModel(Model):
+class MedianModel(TSModel):
     def __init__(self, data):
         assert 'Page' in data.columns and 'Visits' in data.columns, \
             'Data must contain the `Page` and `Visits` columns.'
@@ -24,6 +24,6 @@ class MedianModel(Model):
 
 
 if __name__ == '__main__':
-    fire.Fire(Delegator(LastNDaysMedianLearner, cv_params={
+    fire.Fire(TSDelegator(LastNDaysMedianLearner, cv_params={
         'days_to_consider': range(14, 100, 7),
     }))

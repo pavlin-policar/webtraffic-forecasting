@@ -12,19 +12,19 @@ from validation import validate_last_n_days, validate_forward_chaining, \
     validate_time_period
 
 
-class Learner(metaclass=ABCMeta):
+class TSLearner(metaclass=ABCMeta):
     @abstractmethod
     def fit(self, data):
         """Fit the model on some training data."""
 
 
-class Model(metaclass=ABCMeta):
+class TSModel(metaclass=ABCMeta):
     @abstractmethod
     def predict(self, data):
         """Make predictions on given data."""
 
 
-class Delegator(metaclass=ABCMeta):
+class TSDelegator(metaclass=ABCMeta):
     def __init__(self, learner_cls, cv_params=None):
         self.learner_cls = learner_cls
         self.cv_params = cv_params or {}
