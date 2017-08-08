@@ -3,19 +3,7 @@ import random
 import numpy as np
 import pandas as pd
 
-from data_provider import TRAIN_DATA, get_date_columns, str_to_date
-
-all_data = pd.read_csv(TRAIN_DATA)
-
-
-def preprocess(data):
-    def category(result):
-        return pd.Series(result, dtype='category')
-
-    data['day_of_week'] = category(data.date.dt.dayofweek)
-    data['weekend'] = category(data.date.dt.dayofweek // 5 == 1)
-
-    return data
+from data_provider import TRAIN_DATA, get_date_columns
 
 
 def fetch_minibatch(data, batch_size=128, lag_length=30):
@@ -56,9 +44,18 @@ def fetch_minibatch(data, batch_size=128, lag_length=30):
     # Set the correct dtypes
     minibatch['date'] = minibatch['date'].astype('datetime64[ns]')
     minibatch['Visits'] = minibatch['Visits'].astype(np.float64)
+    minibatch[lag_columns] = minibatch[lag_columns].astype(np.float64)
 
-    return preprocess(minibatch)
+    # Add some extra helpful features
+    def category(result):
+        return pd.Series(result, dtype='category')
+
+    minibatch['day_of_week'] = category(minibatch.date.dt.dayofweek)
+    minibatch['weekend'] = category(minibatch.date.dt.dayofweek // 5 == 1)
+
+    return minibatch
 
 
+all_data = pd.read_csv(TRAIN_DATA)
 mb = fetch_minibatch(all_data, batch_size=1)
 print(mb)
