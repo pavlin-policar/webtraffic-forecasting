@@ -1,5 +1,7 @@
+from datetime import datetime
 import re
 from os import listdir
+from typing import Union, List
 
 import fire
 import pandas as pd
@@ -87,7 +89,26 @@ def get_language_dataset(dataset, language):
 
 def get_date_columns(data):
     # type: (pd.DataFrame) -> List[str]
-    return [c for c in data.columns if re.match(r'\d{4}-\d{2}-\d{2}', c)]
+    """Get all the date columns in the data in ascending order."""
+    dates = sorted(datetime.strptime(c, '%Y-%m-%d') for c in data.columns
+                   if re.match(r'\d{4}-\d{2}-\d{2}', c))
+    return date_to_str(dates)
+
+
+def str_to_date(dates):
+    # type: (Union[str, List[str]]) -> List[datetime]
+    if not isinstance(dates, list):
+        dates = [dates]
+
+    return [datetime.strptime(date, '%Y-%m-%d') for date in dates]
+
+
+def date_to_str(dates):
+    # type: (Union[datetime, List[datetime]]) -> List[str]
+    if not isinstance(dates, list):
+        dates = [dates]
+
+    return [date.strftime('%Y-%m-%d') for date in dates]
 
 
 if __name__ == '__main__':
