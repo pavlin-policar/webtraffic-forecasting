@@ -6,56 +6,74 @@ import pandas as pd
 from data_provider import TRAIN_DATA, get_date_columns
 
 
-def fetch_minibatch(data, batch_size=128, lag_length=30):
+def epoch(data, batch_size=128, lag_length=30):
     """Create a minibatch from the data."""
     all_dates = get_date_columns(data)
     # We will ignore the lag days since we don't want to have null variables
     dates = all_dates[lag_length:]
 
+    # Prepare the columns that we will set during the initial iteration
     columns = ['Page', 'date', 'Visits']
     lag_columns = list(reversed(['lag_%d' % i for i in range(1, lag_length + 1)]))
     columns += lag_columns
-    minibatch = pd.DataFrame(columns=columns)
 
-    for idx, (_, instance) in enumerate(data.sample(batch_size).iterrows()):
+    candidates = {d: list(dates) for d in data.index}
 
-        date, dates_ = random.choice(dates), list(dates)
-        # We don't want to deal with NaN values, so skip over those
-        # Try to select a non-NaN target and if no such value exists, skip row
-        while pd.isnull(instance[date]) and len(dates_):
-            dates_.remove(date)
-            date = random.choice(dates_)
-        if pd.isnull(instance[date]):
-            continue
+    while len(candidates):
+        sample_indices = random.choices(list(candidates.keys()), k=batch_size)
+        samples = []
+        print(len(candidates))
 
-        minibatch.loc[idx, 'Page'] = instance['Page']
-        minibatch.loc[idx, 'date'] = date
-        minibatch.loc[idx, 'Visits'] = instance[date]
+        for idx in sample_indices:
+            instance = data.loc[idx]
+            date = random.choice(candidates[idx])
+            candidates[idx].remove(date)
 
-        # Impute any missing values in the row once we know that the date we
-        # chose indeed has a known value
-        instance = instance.fillna(instance.rolling(window=5).median())
-        # Fill the row with lag variables
-        date_index = all_dates.index(date)
-        date_range = all_dates[date_index - lag_length:date_index]
+            # If the sample has no more valid dates, remove the sample from the
+            # sample pool
+            if not len(candidates[idx]):
+                del candidates[idx]
 
-        minibatch.loc[idx, lag_columns] = instance[date_range].values
+            # Begin preparing the minibatch dataframes
+            if pd.isnull(instance[date]):
+                continue
 
-    # Set the correct dtypes
-    minibatch['date'] = minibatch['date'].astype('datetime64[ns]')
-    minibatch['Visits'] = minibatch['Visits'].astype(np.float64)
-    minibatch[lag_columns] = minibatch[lag_columns].astype(np.float64)
+            sample = pd.Series(index=columns)
+            sample['Page'] = instance['Page']
+            sample['date'] = date
+            sample['Visits'] = instance[date]
 
-    # Add some extra helpful features
-    def category(result):
-        return pd.Series(result, dtype='category')
+            # Impute any missing values in the row once we know that the date
+            # we chose indeed has a known value
+            instance = instance.fillna(instance.rolling(window=5).median())
+            # Fill the row with lag variables
+            date_index = all_dates.index(date)
+            date_range = all_dates[date_index - lag_length:date_index]
+            sample.loc[lag_columns] = instance[date_range].values
 
-    minibatch['day_of_week'] = category(minibatch.date.dt.dayofweek)
-    minibatch['weekend'] = category(minibatch.date.dt.dayofweek // 5 == 1)
+            samples.append(sample)
 
-    return minibatch
+        # Merge all the sample dataframes into a single minibatch dataframe
+        minibatch = pd.DataFrame(samples)
+
+        # Set the correct dtypes
+        minibatch['date'] = pd.to_datetime(minibatch['date'], format='%Y-%m-%d')
+        minibatch['Visits'] = minibatch['Visits'].astype(np.float64)
+        minibatch[lag_columns] = minibatch[lag_columns].astype(np.float64)
+
+        # Add some extra helpful features
+        def category(result):
+            return pd.Series(result, dtype='category')
+
+        minibatch['day_of_week'] = category(minibatch.date.dt.dayofweek)
+        minibatch['weekend'] = category(minibatch.date.dt.dayofweek // 5 == 1)
+
+        yield minibatch
 
 
 all_data = pd.read_csv(TRAIN_DATA)
-mb = fetch_minibatch(all_data, batch_size=1)
-print(mb)
+
+
+for mb in epoch(all_data, batch_size=256):
+    print(mb)
+    break
