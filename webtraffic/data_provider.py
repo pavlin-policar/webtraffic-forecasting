@@ -129,7 +129,6 @@ def epoch(data, batch_size=128, lag_length=30):
     while len(candidates):
         sample_indices = random.choices(list(candidates.keys()), k=batch_size)
         samples = []
-        print(len(candidates))
 
         for idx in sample_indices:
             instance = data.loc[idx]
@@ -157,6 +156,9 @@ def epoch(data, batch_size=128, lag_length=30):
             date_index = all_dates.index(date)
             date_range = all_dates[date_index - lag_length:date_index]
             sample.loc[lag_columns] = instance[date_range].values
+
+            if any(pd.isnull(instance)):
+                continue
 
             samples.append(sample)
 
