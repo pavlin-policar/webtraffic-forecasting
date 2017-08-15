@@ -1,4 +1,5 @@
 import sys
+from datetime import timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,9 +9,59 @@ from torch import nn
 from torch.autograd import Variable
 from torch.nn import MSELoss
 
-from data_provider import TRAIN_DATA, epoch, get_language_dataset
+from data_provider import TRAIN_DATA, epoch, get_language_dataset, \
+    get_date_columns
 
 N_EPOCHS = 1
+
+
+def prepare_dataset(data, n_last_days=100, lag_days=30):
+    date_columns = get_date_columns(data)
+    used_data = data[['Page'] + date_columns[-n_last_days:]]
+
+    flattened = pd.melt(used_data, id_vars='Page', var_name='date',
+                        value_name='Visits')
+    # Remove null columns
+    flattened = flattened.loc[~pd.isnull(flattened['Visits'])]
+
+    # Add lag columns to flattened
+    lag_columns = list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
+    flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
+
+    for idx, row in flattened.iterrows():
+        end_index = date_columns.index(row['date'])
+        date_range = date_columns[end_index - lag_days: end_index]
+        flattened.loc[idx, lag_columns] = data.loc[idx, date_range].values
+
+        if idx % 1 == 0:
+            print('[%7d/%7d] date ranges generated' % (idx, flattened.shape[0]))
+
+    # Since we're not lacking in training data, remove any rows with nulls
+    print(flattened.shape)
+    flattened = flattened[~pd.isnull(flattened).any()]
+    print(flattened.shape)
+
+    # Set correct dtypes
+    flattened['date'] = flattened['date'].astype('datetime64[ns]')
+    flattened['Visits'] = flattened['Visits'].astype(np.float64)
+    flattened[lag_columns] = flattened[lag_columns].astype(np.float64)
+
+    # # Add some extra helpful features
+    # def category(result):
+    #     return pd.Series(result, dtype='category')
+    #
+    # flattened['day_of_week'] = category(flattened.date.dt.dayofweek)
+    # flattened['weekend'] = category(flattened.date.dt.dayofweek // 5 == 1)
+
+    return flattened
+
+
+data = pd.read_csv(TRAIN_DATA)
+data = prepare_dataset(data, n_last_days=40)
+print(data)
+data.to_csv('ml_data_last_40_days_30_lag.csv')
+
+sys.exit(0)
 
 
 class LinearRegression(nn.Module):
@@ -80,3 +131,4 @@ for i in range(N_EPOCHS):
         plt.plot(*list(zip(*losses)))
         plt.show()
         sys.exit(0)
+
