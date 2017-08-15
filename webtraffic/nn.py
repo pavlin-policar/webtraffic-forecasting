@@ -1,3 +1,6 @@
+import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -5,7 +8,7 @@ from torch import nn
 from torch.autograd import Variable
 from torch.nn import MSELoss
 
-from data_provider import TRAIN_DATA, epoch
+from data_provider import TRAIN_DATA, epoch, get_language_dataset
 
 N_EPOCHS = 1
 
@@ -13,46 +16,67 @@ N_EPOCHS = 1
 class LinearRegression(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        self.linear = nn.Linear(input_size, output_size)
+        self.fc1 = nn.Linear(input_size, 50)
+        self.fc2 = nn.Linear(50, 50)
+        self.fc3 = nn.Linear(50, output_size)
+        self.relu = nn.ReLU()
 
     def forward(self, x):
-        return self.linear(x)
+        out = self.relu(self.fc1(x))
+        out = self.relu(self.fc2(out))
+        out = self.fc3(out)
+        return out
 
 
-model = LinearRegression(39, 1)
+model = LinearRegression(39, 1).cuda()
 
 criterion = MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=0.1)
 
 
-data = pd.read_csv(TRAIN_DATA)
+data = pd.read_csv(get_language_dataset(TRAIN_DATA, 'en'))
 # Normalize the data
 cols = data.columns.difference(['Page'])
 data[cols] = (data[cols] - data[cols].mean()) / data[cols].std()
 
 
+losses = []
+columns = None
 for i in range(N_EPOCHS):
-    for minibatch in epoch(data, batch_size=256):
+    try:
+        for idx, minibatch in enumerate(epoch(data, batch_size=256)):
+            targets = minibatch.pop('Visits')
+            minibatch = minibatch.drop(['Page', 'date'], axis=1)
+            columns = minibatch.columns
 
-        targets = minibatch.pop('Visits')
-        minibatch = minibatch.drop(['Page', 'date'], axis=1)
+            data = pd.get_dummies(minibatch)
+            data = data.values.astype(np.float32)
+            targets = targets.values.astype(np.float32)
 
-        data = pd.get_dummies(minibatch)
-        data = data.values.astype(np.float32)
-        targets = targets.values.astype(np.float32)
+            data = Variable(torch.from_numpy(data)).cuda()
+            targets = Variable(torch.from_numpy(targets)).cuda()
 
-        data = Variable(torch.from_numpy(data))
-        targets = Variable(torch.from_numpy(targets))
+            # Reset gradients
+            optimizer.zero_grad()
 
-        # Reset gradients
-        optimizer.zero_grad()
+            # Compute the predictions
+            outputs = model(data)
 
-        # Compute the predictions
-        outputs = model(data)
+            # Compute the loss and updatae the weights
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
 
-        # Compute the loss and updatae the weights
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+            losses.append((idx, np.log(loss.data[0])))
 
-        print('Epoch [%d/%d], Loss: %.4f' % (i + 1, N_EPOCHS, loss.data[0]))
+            print('Epoch [%d/%d], Loss: %.8f' % (i + 1, N_EPOCHS, loss.data[0]))
+
+    except KeyboardInterrupt:
+        print()
+        # for v in sorted(
+        #         list(zip(columns, list(model.parameters())[0][0].data)),
+        #         key=lambda x: abs(x[1]), reverse=True):
+        #     print("%20s: %.4f" % v)
+        plt.plot(*list(zip(*losses)))
+        plt.show()
+        sys.exit(0)

@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from itertools import chain
 
@@ -5,8 +6,6 @@ import numpy as np
 import pandas as pd
 
 from data_provider import convert_to_test, prepare_test_data, get_date_columns
-
-import logging
 
 logger = logging.getLogger('VALIDATION')
 
