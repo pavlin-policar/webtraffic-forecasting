@@ -1,15 +1,10 @@
 import sys
-from datetime import timedelta
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import torch
 from torch import nn
-from torch.autograd import Variable
-from torch.nn import MSELoss
 
-from data_provider import TRAIN_DATA, epoch, get_language_dataset, \
+from data_provider import TRAIN_DATA, get_language_dataset, \
     get_date_columns
 
 N_EPOCHS = 1
@@ -21,25 +16,39 @@ def prepare_dataset(data, n_last_days=100, lag_days=30):
 
     flattened = pd.melt(used_data, id_vars='Page', var_name='date',
                         value_name='Visits')
-    # Remove null columns
-    flattened = flattened.loc[~pd.isnull(flattened['Visits'])]
+    # For convenience, sort the data by pages
+    flattened.sort_values(by='Page', inplace=True)
+    flattened.reset_index(inplace=True, drop=True)
+    # Drop any columns where the target value is unknown
+    flattened.dropna(how='any', inplace=True)
 
     # Add lag columns to flattened
     lag_columns = list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
     flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
 
-    for idx, row in flattened.iterrows():
-        end_index = date_columns.index(row['date'])
-        date_range = date_columns[end_index - lag_days: end_index]
-        flattened.loc[idx, lag_columns] = data.loc[idx, date_range].values
+    date_indices = {d: i for i, d in enumerate(date_columns)}
 
-        if idx % 1 == 0:
-            print('[%7d/%7d] date ranges generated' % (idx, flattened.shape[0]))
+    # We will need the original data page indices and to set the index to page
+    data['page_indices'] = data.index
+    data.set_index('Page', inplace=True)
 
-    # Since we're not lacking in training data, remove any rows with nulls
-    print(flattened.shape)
-    flattened = flattened[~pd.isnull(flattened).any()]
-    print(flattened.shape)
+    page_indices = pd.DataFrame({
+        'Page': flattened['Page'],
+        'date_indices': flattened['date'].apply(date_indices.get),
+    }).set_index('Page').join(data['page_indices']).reset_index()
+
+    # Revert the data to its initial shape
+    # data.drop('page_indices', inplace=True)
+    # data.reset_index()
+
+    for lag in range(1, lag_days + 1):
+        flattened['lag_%d' % lag] = data[date_columns].values[
+            page_indices['page_indices'],
+            page_indices['date_indices'] - lag
+        ]
+
+    # Since we're not lacking in training data, drop any row with NaN lag vars
+    flattened.dropna(how='any', inplace=True)
 
     # Set correct dtypes
     flattened['date'] = flattened['date'].astype('datetime64[ns]')
@@ -47,19 +56,19 @@ def prepare_dataset(data, n_last_days=100, lag_days=30):
     flattened[lag_columns] = flattened[lag_columns].astype(np.float64)
 
     # # Add some extra helpful features
-    # def category(result):
-    #     return pd.Series(result, dtype='category')
-    #
-    # flattened['day_of_week'] = category(flattened.date.dt.dayofweek)
-    # flattened['weekend'] = category(flattened.date.dt.dayofweek // 5 == 1)
+    def category(result):
+        return pd.Series(result, dtype='category')
+
+    flattened['day_of_week'] = category(flattened.date.dt.dayofweek)
+    flattened['weekend'] = category(flattened.date.dt.dayofweek // 5 == 1)
 
     return flattened
 
 
-data = pd.read_csv(TRAIN_DATA)
-data = prepare_dataset(data, n_last_days=40)
+data = pd.read_csv(get_language_dataset(TRAIN_DATA, 'de'))
+data = prepare_dataset(data, n_last_days=10)
 print(data)
-data.to_csv('ml_data_last_40_days_30_lag.csv')
+# data.to_csv('ml_data_last_10_days_30_lag.csv')
 
 sys.exit(0)
 
