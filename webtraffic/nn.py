@@ -2,75 +2,27 @@ import sys
 
 import numpy as np
 import pandas as pd
+import torch
 from torch import nn
+from torch.nn import MSELoss
 
-from data_provider import TRAIN_DATA, get_language_dataset, \
-    get_date_columns
+from data_provider import TRAIN_DATA
+from ml_dataset import ML_DATASET
 
 N_EPOCHS = 1
 
 
-def prepare_dataset(data, n_last_days=100, lag_days=30):
-    date_columns = get_date_columns(data)
-    used_data = data[['Page'] + date_columns[-n_last_days:]]
-
-    flattened = pd.melt(used_data, id_vars='Page', var_name='date',
-                        value_name='Visits')
-    # For convenience, sort the data by pages
-    flattened.sort_values(by='Page', inplace=True)
-    flattened.reset_index(inplace=True, drop=True)
-    # Drop any columns where the target value is unknown
-    flattened.dropna(how='any', inplace=True)
-
-    # Add lag columns to flattened
-    lag_columns = list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
-    flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
-
-    date_indices = {d: i for i, d in enumerate(date_columns)}
-
-    # We will need the original data page indices and to set the index to page
-    data['page_indices'] = data.index
-    data.set_index('Page', inplace=True)
-
-    page_indices = pd.DataFrame({
-        'Page': flattened['Page'],
-        'date_indices': flattened['date'].apply(date_indices.get),
-    }).set_index('Page').join(data['page_indices']).reset_index()
-
-    # Revert the data to its initial shape
-    # data.drop('page_indices', inplace=True)
-    # data.reset_index()
-
-    for lag in range(1, lag_days + 1):
-        flattened['lag_%d' % lag] = data[date_columns].values[
-            page_indices['page_indices'],
-            page_indices['date_indices'] - lag
-        ]
-
-    # Since we're not lacking in training data, drop any row with NaN lag vars
-    flattened.dropna(how='any', inplace=True)
-
-    # Set correct dtypes
-    flattened['date'] = flattened['date'].astype('datetime64[ns]')
-    flattened['Visits'] = flattened['Visits'].astype(np.float64)
-    flattened[lag_columns] = flattened[lag_columns].astype(np.float64)
+def load_data():
+    data = pd.read_csv(ML_DATASET)
 
     # # Add some extra helpful features
     def category(result):
         return pd.Series(result, dtype='category')
 
-    flattened['day_of_week'] = category(flattened.date.dt.dayofweek)
-    flattened['weekend'] = category(flattened.date.dt.dayofweek // 5 == 1)
+    data['day_of_week'] = category(data.date.dt.dayofweek)
+    data['weekend'] = category(data.date.dt.dayofweek // 5 == 1)
 
-    return flattened
-
-
-data = pd.read_csv(get_language_dataset(TRAIN_DATA, 'de'))
-data = prepare_dataset(data, n_last_days=10)
-print(data)
-# data.to_csv('ml_data_last_10_days_30_lag.csv')
-
-sys.exit(0)
+    return data
 
 
 class LinearRegression(nn.Module):
@@ -94,7 +46,9 @@ criterion = MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=0.1)
 
 
-data = pd.read_csv(get_language_dataset(TRAIN_DATA, 'en'))
+data = load_data()
+input()
+sys.exit(0)
 # Normalize the data
 cols = data.columns.difference(['Page'])
 data[cols] = (data[cols] - data[cols].mean()) / data[cols].std()
