@@ -1,18 +1,21 @@
+import shutil
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from os.path import join
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
     BatchSampler
 
+from data_provider import MODELS_DIR
 from ml_dataset import ML_DATASET
 
-N_EPOCHS = 10
-BATCH_SIZE = 256
+N_EPOCHS = 20
+BATCH_SIZE = 512
 
 
 def load_data():
@@ -49,15 +52,20 @@ class LinearRegression(nn.Module):
 class NeuralNet(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        self.fc1 = nn.Linear(input_size, 100)
-        self.fc2 = nn.Linear(100, 100)
-        self.fc3 = nn.Linear(100, output_size)
+        hidden_size = 1000
+        self.input = nn.Linear(input_size, hidden_size)
+        self.output = nn.Linear(hidden_size, output_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
+        # self.fc4 = nn.Linear(hidden_size, hidden_size)
         self.selu = nn.SELU()
 
     def forward(self, x):
-        out = self.selu(self.fc1(x))
+        out = self.selu(self.input(x))
         out = self.selu(self.fc2(out))
-        out = self.fc3(out)
+        out = self.selu(self.fc3(out))
+        # out = self.selu(self.fc4(out))
+        out = self.output(out)
         return out
 
 
@@ -85,27 +93,32 @@ y_validation = validation.pop('Visits').astype(np.float32)
 y_test = test.pop('Visits').astype(np.float32)
 
 
-def compute_loss(data, criterion, model):
+def compute_loss(data, y_data, criterion, model):
     losses = []
     for batch_idx in BatchSampler(SequentialSampler(data), BATCH_SIZE, False):
-        x, y = data.iloc[batch_idx], data.iloc[batch_idx]
-        x = Variable(torch.from_numpy(x.values)).cuda()
-        y = Variable(torch.from_numpy(y.values)).cuda()
+        x, y = data.iloc[batch_idx], y_data.iloc[batch_idx]
+        x = Variable(torch.from_numpy(x.values), volatile=True).cuda()
+        y = Variable(torch.from_numpy(y.values), volatile=True).cuda()
 
         y_hat = model(x)
         # Compute the loss and update the weights
         loss = criterion(y, y_hat)
-        print(loss)
-        loss.backward()
         losses.append(loss.data[0])
 
-    print(losses)
     return np.mean(losses)
 
 
-model = LinearRegression(train.shape[1], 1).cuda()
+def save_checkpoint(state, is_best, filename='checkpoint.tar'):
+    fname = join(MODELS_DIR, filename)
+    torch.save(state, fname)
+    if is_best:
+        shutil.copyfile(fname, join(MODELS_DIR, 'model_best.tar'))
+
+
+model = NeuralNet(train.shape[1], 1).cuda()
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
+best_loss = np.inf
 
 training_losses, validation_losses = [], []
 
@@ -129,18 +142,25 @@ for epoch in range(N_EPOCHS):
     # Compute the training and validation loss
     model.eval()
 
-    print('training loss')
-    training_loss = compute_loss(train, criterion, model)
+    training_loss = compute_loss(train, y_train, criterion, model)
     training_losses.append(training_loss)
 
-    print('validation loss')
-    validation_loss = compute_loss(validation, criterion, model)
+    validation_loss = compute_loss(validation, y_validation, criterion, model)
     validation_losses.append(validation_loss)
 
-    print('[%2d/%d] Training loss: %.4f Validation loss: %.4f' %
-          (epoch, N_EPOCHS, training_loss, validation_loss))
+    # Save checkpoint model and best model
+    is_best = validation_loss < best_loss
+    best_loss = min(validation_loss, best_loss)
+    save_checkpoint({
+        'epoch': epoch + 1,
+        'state_dict': model.state_dict(),
+        'best_loss': best_loss,
+        'optimizer': optimizer.state_dict(),
+    }, is_best)
 
-print()
+    print('[%2d/%d] Training loss: %.4f - Validation loss: %.4f' %
+          (epoch + 1, N_EPOCHS, training_loss, validation_loss))
+
 plt.plot(list(range(len(training_losses))), training_losses)
 plt.plot(list(range(len(validation_losses))), validation_losses)
 plt.show()
