@@ -11,7 +11,7 @@ from torch.utils.data.sampler import RandomSampler
 
 from ml_dataset import ML_DATASET
 
-N_EPOCHS = 10
+N_EPOCHS = 20
 BATCH_SIZE = 256
 
 
@@ -64,13 +64,19 @@ std = data[normalize_cols].values.std(ddof=1)
 data[normalize_cols] -= mean
 data[normalize_cols] /= std
 
-# Remove columns
+# Remove columns that we won't use for training
 data.drop(['Page', 'date'], inplace=True, axis=1)
 
-# Prepare the dataset for training
-target = data.pop('Visits').astype(np.float32)
-
+# Prepare the data for training
 data = pd.get_dummies(data).astype(np.float32)
+
+# Create the train/validation/test splits
+train, validation, test = np.split(
+    data.sample(frac=1), [int(.6 * len(data)), int(.8 * len(data))])
+
+y_train = train.pop('Visits').astype(np.float32)
+y_validation = validation.pop('Visits').astype(np.float32)
+y_test = test.pop('Visits').astype(np.float32)
 
 
 class BatchSampler:
@@ -113,49 +119,49 @@ class BatchSampler:
 
 model = LinearRegression(data.shape[1], 1).cuda()
 criterion = MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=0.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
 
-
-
-losses = []
-columns = None
-
-
-def done():
-    print()
-    columns = data.columns
-    for v in sorted(
-            list(zip(columns, list(model.parameters())[0][0].data)),
-            key=lambda x: abs(x[1]), reverse=True):
-        print("%20s: %.4f" % v)
-    plt.plot(list(range(len(losses))), losses)
-    plt.show()
-    sys.exit(0)
-
+training_losses, validation_losses = [], []
 
 try:
     for epoch in range(N_EPOCHS):
-        for batch_idx in BatchSampler(RandomSampler(data), BATCH_SIZE, False):
-            x, y = data.iloc[batch_idx], target.iloc[batch_idx]
-
+        losses_ = []
+        # Train on minibatches
+        for batch_idx in BatchSampler(RandomSampler(train), BATCH_SIZE, False):
+            x, y = train.iloc[batch_idx], y_train.iloc[batch_idx]
             x = Variable(torch.from_numpy(x.values)).cuda()
             y = Variable(torch.from_numpy(y.values)).cuda()
 
             # Reset gradients
             optimizer.zero_grad()
-
             # Compute the predictions
             y_hat = model(x)
-
             # Compute the loss and updatae the weights
             loss = criterion(y_hat, y)
             loss.backward()
             optimizer.step()
 
-        print(loss)
-        losses.append(loss.data[0])
+            losses_.append(loss.data[0])
+
+        # Store the training loss for given epoch
+        training_losses.append(np.mean(losses_))
+
+        # Compute the validation loss
+        x = Variable(torch.from_numpy(validation.values)).cuda()
+        y = Variable(torch.from_numpy(y_validation.values)).cuda()
+        y_hat = model(x)
+        validation_loss = criterion(y_hat, y)
+
+        validation_losses.append(validation_loss.data[0])
+
+        print('[%2d/%d] Training loss: %.4f Validation loss: %.4f' %
+              (epoch, N_EPOCHS, training_losses[-1], validation_losses[-1]))
 
 except KeyboardInterrupt:
-    done()
+    pass
 finally:
-    done()
+    print()
+    plt.plot(list(range(len(training_losses))), training_losses)
+    plt.plot(list(range(len(validation_losses))), validation_losses)
+    plt.show()
+    sys.exit(0)
