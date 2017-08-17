@@ -8,6 +8,10 @@ from data_provider import get_date_columns, TRAIN_DATA, DATA_DIR
 ML_DATASET = join(DATA_DIR, 'ml_train_1.csv')
 
 
+def get_lag_columns(lag_days):
+    return list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
+
+
 def prepare_ml_dataset(data, n_last_days, lag_days=30):
     date_columns = get_date_columns(data)
     used_data = data[['Page'] + date_columns[-n_last_days:]]
@@ -21,10 +25,8 @@ def prepare_ml_dataset(data, n_last_days, lag_days=30):
     flattened.dropna(how='any', inplace=True)
 
     # Add lag columns to flattened
-    lag_columns = list(
-        reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
-    flattened = flattened.reindex(
-        columns=list(flattened.columns) + lag_columns)
+    lag_columns = get_lag_columns(lag_days)
+    flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
 
     date_indices = {d: i for i, d in enumerate(date_columns)}
 
@@ -57,4 +59,4 @@ def prepare_ml_dataset(data, n_last_days, lag_days=30):
 if __name__ == '__main__':
     ds = pd.read_csv(TRAIN_DATA)
     ds = prepare_ml_dataset(ds, n_last_days=30)
-    ds.to_csv(ML_DATASET)
+    ds.to_csv(ML_DATASET, index=False)
