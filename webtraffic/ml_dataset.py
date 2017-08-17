@@ -64,13 +64,13 @@ def make_info_file(data):
         'mean': data[normalize_cols].values.mean(),
         'std': data[normalize_cols].values.std(ddof=1),
     }
-    ds_data_fname = ML_DATASET.split('.')[0] + 'data.json'
-    with open(ds_data_fname) as f:
-        json.dumps(ds_data, f)
+    ds_data_fname = ML_DATASET.split('.')[0] + '_data.json'
+    with open(ds_data_fname, 'w') as f:
+        f.write(json.dumps(ds_data))
 
 
 def get_info_file():
-    ds_data_fname = ML_DATASET.split('.')[0] + 'data.json'
+    ds_data_fname = ML_DATASET.split('.')[0] + '_data.json'
     return json.load(ds_data_fname)
 
 
