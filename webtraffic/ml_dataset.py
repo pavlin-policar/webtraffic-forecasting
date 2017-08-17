@@ -1,3 +1,4 @@
+import json
 from os.path import join
 
 import numpy as np
@@ -56,7 +57,26 @@ def prepare_ml_dataset(data, n_last_days, lag_days=30):
     return flattened
 
 
+def make_info_file(data):
+    normalize_cols = ['Visits'] + [c for c in data.columns if 'lag' in c]
+    ds_data = {
+        'normalize_cols': normalize_cols,
+        'mean': data[normalize_cols].values.mean(),
+        'std': data[normalize_cols].values.std(ddof=1),
+    }
+    ds_data_fname = ML_DATASET.split('.')[0] + 'data.json'
+    with open(ds_data_fname) as f:
+        json.dumps(ds_data, f)
+
+
+def get_info_file():
+    ds_data_fname = ML_DATASET.split('.')[0] + 'data.json'
+    return json.load(ds_data_fname)
+
+
 if __name__ == '__main__':
     ds = pd.read_csv(TRAIN_DATA)
     ds = prepare_ml_dataset(ds, n_last_days=30)
     ds.to_csv(ML_DATASET, index=False)
+
+    make_info_file(ds)
