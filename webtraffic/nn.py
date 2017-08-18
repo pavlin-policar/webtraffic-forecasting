@@ -9,6 +9,7 @@ import pandas as pd
 import torch
 from torch import nn
 from torch.autograd import Variable
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
     BatchSampler
 
@@ -17,7 +18,7 @@ from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
 from ml_dataset import ML_VALIDATION, ML_TRAIN, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
-N_EPOCHS = 20
+N_EPOCHS = 500
 BATCH_SIZE = 512
 
 
@@ -33,25 +34,28 @@ class LinearRegression(nn.Module):
 class NeuralNet(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        hidden_size = 1000
+        hidden_size = 500
         self.input = nn.Linear(input_size, hidden_size)
         self.output = nn.Linear(hidden_size, output_size)
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, hidden_size)
-        # self.fc4 = nn.Linear(hidden_size, hidden_size)
+        # self.fc3 = nn.Linear(hidden_size, hidden_size)
         self.selu = nn.SELU()
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         out = self.selu(self.input(x))
+        out = self.selu(self.fc1(out))
+        out = self.dropout(out)
         out = self.selu(self.fc2(out))
-        out = self.selu(self.fc3(out))
-        # out = self.selu(self.fc4(out))
+        # out = self.dropout(out)
+        # out = self.selu(self.fc3(out))
         out = self.output(out)
         return out
 
 
 def get_model(input_size, output_size):
-    return LinearRegression(input_size, output_size)
+    return NeuralNet(input_size, output_size)
 
 
 def compute_loss(data, y_data, criterion, model):
@@ -137,7 +141,8 @@ def train_model(name):
 
     model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
@@ -157,6 +162,7 @@ def train_model(name):
             # Compute the loss and updatae the weights
             loss = criterion(y_hat, y)
             loss.backward()
+
             optimizer.step()
 
         # Compute the training and validation loss
@@ -166,6 +172,7 @@ def train_model(name):
         training_losses.append(training_loss)
 
         validation_loss = compute_loss(val, y_val, criterion, model)
+        scheduler.step(validation_loss)
         validation_losses.append(validation_loss)
 
         # Save checkpoint model and best model
@@ -181,6 +188,7 @@ def train_model(name):
         print('[%2d/%d] Training loss: %.4f - Validation loss: %.4f' %
               (epoch + 1, N_EPOCHS, training_loss, validation_loss))
 
+    print('Best loss achieved: %.4f' % best_loss)
     plt.plot(list(range(len(training_losses))), np.log(training_losses))
     plt.plot(list(range(len(validation_losses))), np.log(validation_losses))
     plt.show()
@@ -258,9 +266,7 @@ def make_prediction(model_checkpoint):
     # Since SMAPE prefers under-estimates, floor the predictions and make sure
     # no prediction is below 0
     flattened['Visits'] = np.floor(flattened['Visits']).clip(lower=0)
-    below_zero_count = (flattened['Visits'] < 0).count()
-    if below_zero_count:
-        print('%d predictions were negative' % below_zero_count)
+    print('%d predictions were negative' % (flattened['Visits'] < 0).sum())
 
     # Merge the `Page` back into the original names in the key set
     flattened['Page'] = flattened['Page'].str.cat(flattened['date'], sep='_')
