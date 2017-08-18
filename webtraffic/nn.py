@@ -12,8 +12,8 @@ from torch.autograd import Variable
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
     BatchSampler
 
-from data_provider import MODELS_DIR, TEST_DATA, prepare_test_data, TRAIN_DATA, \
-    get_date_columns
+from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
+    get_date_columns, save_predictions, PREDICTIONS_DIR
 from ml_dataset import ML_VALIDATION, ML_TRAIN, get_info_file, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
@@ -195,12 +195,11 @@ def make_prediction():
     # Extract date and page to own columns
     test_data['date'] = test_data['Page'].apply(lambda a: a[-10:])
     test_data['Page'] = test_data['Page'].apply(lambda a: a[:-11])
-
-    test_dates = test_data['date'].unique()
-    test_data = pd.DataFrame(
-        index=test_data['Page'].unique(),
-        columns=test_dates,
-    )
+    # Add dummy variable so we can pivot
+    test_data['Visits'] = 0
+    # Put the test data into a the table format as in the training data
+    test_data = test_data.pivot(index='Page', columns='date', values='Visits')
+    test_dates = test_data.columns
 
     lag_test_set = pd.read_csv(lag_test_set_fname(LAG_DAYS))
     data = lag_test_set.join(test_data, on='Page')
@@ -227,7 +226,6 @@ def make_prediction():
         tmp['date'] = date
         tmp = tmp.rename(columns=dict(zip(lag_columns, lag_column_names)))
         tmp = load_data(tmp)
-        print(tmp.columns)
 
         # Load up the model if running first time, we need to do this here
         # since we don't know the number of features in advance
@@ -235,8 +233,30 @@ def make_prediction():
             model = NeuralNet(tmp.shape[1], 1).cuda()
             checkpoint = torch.load(join(MODELS_DIR, 'model_best.tar'))
             model.load_state_dict(checkpoint['state_dict'])
-        print(model)
-        break
+
+        # Make predictions
+        predictions = np.zeros(data.shape[0])
+        for batch_idx in BatchSampler(SequentialSampler(data), BATCH_SIZE, False):
+            x = Variable(torch.from_numpy(tmp.iloc[batch_idx].values), volatile=True).cuda()
+            predictions[batch_idx] = model(x).cpu().data.numpy().reshape(-1)
+        data[date] = predictions
+
+    # Rescale the data back to regular proportions
+    predictions = data[['Page'] + list(test_dates)]
+    data_info = get_info_file()
+    predictions[test_dates] *= data_info['std']
+    predictions[test_dates] += data_info['mean']
+
+    flattened = pd.melt(predictions, id_vars='Page', var_name='date',
+                        value_name='Visits')
+
+    flattened['Visits'] = np.floor(flattened['Visits'])
+    # Merge the `Page` back into the original names in the key set
+    flattened['Page'] = flattened['Page'].str.cat(flattened['date'], sep='_')
+    flattened['Id'] = flattened['Page'].apply(test_ids.get)
+
+    # Save the predictions
+    save_predictions(flattened, join(PREDICTIONS_DIR, 'nn.predictions.csv'))
 
 
 if __name__ == '__main__':

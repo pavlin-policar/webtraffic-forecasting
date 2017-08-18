@@ -85,10 +85,11 @@ def make_splits(data):
 
 def make_info_file(data):
     normalize_cols = ['Visits'] + [c for c in data.columns if 'lag' in c]
+    values = data[normalize_cols].values
     ds_data = {
         'normalize_cols': normalize_cols,
-        'mean': data[normalize_cols].values.mean(),
-        'std': data[normalize_cols].values.std(ddof=1),
+        'mean': values.mean(),
+        'std': values.std(ddof=1),
     }
     with open(ML_DATASET_INFO, 'w') as f:
         f.write(json.dumps(ds_data))
