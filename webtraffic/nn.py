@@ -103,10 +103,16 @@ def load_data(data):
         return pd.Categorical(result, **kwargs)
 
     data['day_of_week'] = category(
-        data.date.dt.dayofweek, categories=[0, 1, 2, 3, 4, 5, 6]
+        data.date.dt.dayofweek, categories=list(range(6))
     )
     data['weekend'] = category(
         data.date.dt.dayofweek // 5 == 1, categories=[True, False]
+    )
+    data['month'] = category(
+        data.date.dt.month, categories=list(range(12))
+    )
+    data['season'] = category(
+        data.date.dt.month // 4, categories=list(range(4))
     )
 
     data[['title', 'lang', 'access', 'agent']] = data['Page'].str.extract(
@@ -142,7 +148,7 @@ def train_model(name):
     model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=20)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
