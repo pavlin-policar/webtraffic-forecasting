@@ -1,6 +1,6 @@
 import shutil
 import sys
-from os.path import join
+from os.path import join, exists
 
 import fire
 import matplotlib.pyplot as plt
@@ -50,6 +50,10 @@ class NeuralNet(nn.Module):
         return out
 
 
+def get_model(input_size, output_size):
+    return LinearRegression(input_size, output_size)
+
+
 def compute_loss(data, y_data, criterion, model):
     losses = []
     for batch_idx in BatchSampler(SequentialSampler(data), BATCH_SIZE, False):
@@ -75,15 +79,11 @@ def save_checkpoint(state, is_best, filename='checkpoint.tar'):
 def load_data(data):
     # Flags to indicate type of data
     training = 'Visits' in data
-    testing = not training
 
     data_info = get_info_file()
 
     # Normalize the data
-    normalize_cols = data_info['normalize_cols']
-    if testing:
-        normalize_cols.remove('Visits')
-
+    normalize_cols = get_lag_columns(LAG_DAYS)
     data[normalize_cols] -= data_info['mean']
     data[normalize_cols] /= data_info['std']
 
@@ -131,7 +131,9 @@ def train_model():
     train, y_train = load_data(pd.read_csv(ML_TRAIN))
     val, y_val = load_data(pd.read_csv(ML_VALIDATION))
 
-    model = NeuralNet(train.shape[1], 1).cuda()
+    print(train, y_train)
+
+    model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
     best_loss = np.inf
@@ -180,7 +182,6 @@ def train_model():
     plt.plot(list(range(len(training_losses))), training_losses)
     plt.plot(list(range(len(validation_losses))), validation_losses)
     plt.show()
-    sys.exit(0)
 
 
 def make_lag_test_set(lag_days=LAG_DAYS):
@@ -201,6 +202,8 @@ def make_prediction():
     test_data = test_data.pivot(index='Page', columns='date', values='Visits')
     test_dates = test_data.columns
 
+    assert exists(lag_test_set_fname(LAG_DAYS)), \
+        'Lag test set file does not exit. Please run `make_lag_test_set`.'
     lag_test_set = pd.read_csv(lag_test_set_fname(LAG_DAYS))
     data = lag_test_set.join(test_data, on='Page')
 
@@ -230,7 +233,7 @@ def make_prediction():
         # Load up the model if running first time, we need to do this here
         # since we don't know the number of features in advance
         if model is None:
-            model = NeuralNet(tmp.shape[1], 1).cuda()
+            model = get_model(tmp.shape[1], 1).cuda()
             checkpoint = torch.load(join(MODELS_DIR, 'model_best.tar'))
             model.load_state_dict(checkpoint['state_dict'])
 

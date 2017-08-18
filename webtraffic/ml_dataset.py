@@ -38,8 +38,7 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
 
     # Add lag columns to flattened
     lag_columns = get_lag_columns(lag_days)
-    flattened = flattened.reindex(
-        columns=list(flattened.columns) + lag_columns)
+    flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
 
     date_indices = {d: i for i, d in enumerate(date_columns)}
 
@@ -70,7 +69,7 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     flattened.to_csv(ML_DATASET, index=False)
     train, *_ = make_splits(flattened)
 
-    make_info_file(train)
+    make_info_file(train, lag_days)
 
 
 def make_splits(data):
@@ -83,14 +82,9 @@ def make_splits(data):
     return split
 
 
-def make_info_file(data):
-    normalize_cols = ['Visits'] + [c for c in data.columns if 'lag' in c]
-    values = data[normalize_cols].values
-    ds_data = {
-        'normalize_cols': normalize_cols,
-        'mean': values.mean(),
-        'std': values.std(ddof=1),
-    }
+def make_info_file(data, lag_days=LAG_DAYS):
+    values = data[get_lag_columns(lag_days)].values
+    ds_data = {'mean': values.mean(), 'std': values.std(ddof=1)}
     with open(ML_DATASET_INFO, 'w') as f:
         f.write(json.dumps(ds_data))
 
