@@ -1,12 +1,12 @@
 import shutil
-from os.path import join, exists
+from os import makedirs
+from os.path import join, exists, split, dirname
 
 import fire
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from os import makedirs
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
@@ -14,7 +14,7 @@ from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
 
 from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
     get_date_columns, save_predictions, PREDICTIONS_DIR
-from ml_dataset import ML_VALIDATION, ML_TRAIN, get_info_file, LAG_DAYS, \
+from ml_dataset import ML_VALIDATION, ML_TRAIN, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
 N_EPOCHS = 20
@@ -137,7 +137,7 @@ def train_model(name):
 
     model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
@@ -257,7 +257,7 @@ def make_prediction(model_checkpoint):
 
     # Since SMAPE prefers under-estimates, floor the predictions and make sure
     # no prediction is below 0
-    flattened['Visits'] = np.max(0, np.floor(flattened['Visits']))
+    flattened['Visits'] = np.floor(flattened['Visits']).clip(lower=0)
     below_zero_count = (flattened['Visits'] < 0).count()
     if below_zero_count:
         print('%d predictions were negative' % below_zero_count)
@@ -267,7 +267,8 @@ def make_prediction(model_checkpoint):
     flattened['Id'] = flattened['Page'].apply(test_ids.get)
 
     # Save the predictions
-    save_predictions(flattened, join(PREDICTIONS_DIR, 'nn.predictions.csv'))
+    model_name = split(dirname(model_checkpoint))[-1]
+    save_predictions(flattened, join(PREDICTIONS_DIR, '%s.csv' % model_name))
 
 
 if __name__ == '__main__':
