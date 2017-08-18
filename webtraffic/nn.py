@@ -12,8 +12,10 @@ from torch.autograd import Variable
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
     BatchSampler
 
-from data_provider import MODELS_DIR
-from ml_dataset import ML_VALIDATION, ML_TRAIN, get_info_file
+from data_provider import MODELS_DIR, TEST_DATA, prepare_test_data, TRAIN_DATA, \
+    get_date_columns
+from ml_dataset import ML_VALIDATION, ML_TRAIN, get_info_file, LAG_DAYS, \
+    lag_test_set_fname
 
 N_EPOCHS = 20
 BATCH_SIZE = 512
@@ -159,6 +161,27 @@ def train_model():
     plt.plot(list(range(len(validation_losses))), validation_losses)
     plt.show()
     sys.exit(0)
+
+
+def make_lag_test_set(lag_days=LAG_DAYS):
+    data = pd.read_csv(TRAIN_DATA)
+    columns = ['Page'] + get_date_columns(data)[-lag_days:]
+    data[columns].to_csv(lag_test_set_fname(lag_days), index=False)
+
+
+def make_prediction():
+    test_data = pd.read_csv(TEST_DATA)
+    test_ids = dict(zip(test_data['Page'], test_data['Id']))
+    test_data = prepare_test_data(test_data)
+
+    test_data = pd.DataFrame(
+        index=test_data['Page'].unique(),
+        columns=test_data['date'].unique(),
+    )
+
+    lag_test_set = pd.read_csv(lag_test_set_fname(LAG_DAYS))
+    print(lag_test_set.join(test_data, on='Page'))
+    input()
 
 
 if __name__ == '__main__':

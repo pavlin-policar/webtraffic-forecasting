@@ -15,12 +15,14 @@ ML_TRAIN, ML_VALIDATION, ML_TEST = [
     for s in ('train', 'validation', 'test')
 ]
 
+LAG_DAYS = 30
 
-def get_lag_columns(lag_days):
+
+def get_lag_columns(lag_days=LAG_DAYS):
     return list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
 
 
-def prepare(fname=False, n_last_days=40, lag_days=30):
+def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     data = pd.read_csv(fname or TRAIN_DATA)
 
     date_columns = get_date_columns(data)
@@ -94,6 +96,10 @@ def make_info_file(data):
 
 def get_info_file():
     return json.load(ML_DATASET_INFO)
+
+
+def lag_test_set_fname(lag_days=LAG_DAYS):
+    return join(ML_DATASET_DIR, 'lag_test_set_%d.csv' % lag_days)
 
 
 if __name__ == '__main__':
