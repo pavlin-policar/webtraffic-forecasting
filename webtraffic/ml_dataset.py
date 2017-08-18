@@ -20,7 +20,7 @@ def get_lag_columns(lag_days):
     return list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
 
 
-def prepare_ml_dataset(fname, n_last_days, lag_days=30, make_split=True):
+def prepare(fname, n_last_days, lag_days=30, make_split=True):
     data = pd.read_csv(fname or TRAIN_DATA)
 
     date_columns = get_date_columns(data)
@@ -66,19 +66,19 @@ def prepare_ml_dataset(fname, n_last_days, lag_days=30, make_split=True):
 
     # Create the appropriate files
     flattened.to_csv(ML_DATASET, index=False)
-    make_info_file(flattened)
+    train, *_ = make_splits(flattened)
 
-    if make_split:
-        make_splits()
+    make_info_file(train)
 
 
-def make_splits():
-    data = pd.read_csv(ML_DATASET)
+def make_splits(data):
     split = np.split(
         data.sample(frac=1), [int(.6 * len(data)), int(.8 * len(data))]
     )
     for dataset, fname in zip(split, (ML_TRAIN, ML_VALIDATION, ML_TEST)):
         dataset.to_csv(fname, index=False)
+
+    return split
 
 
 def make_info_file(data):
