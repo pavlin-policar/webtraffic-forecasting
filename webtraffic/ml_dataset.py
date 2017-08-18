@@ -6,7 +6,11 @@ import pandas as pd
 
 from data_provider import get_date_columns, TRAIN_DATA, DATA_DIR
 
-ML_DATASET = join(DATA_DIR, 'ml_train_1.csv')
+ML_DATASET_DIR = join(DATA_DIR, 'ml')
+ML_DATASET = join(ML_DATASET_DIR, 'ml_train_1.csv')
+ML_DATASET_INFO = join(ML_DATASET_DIR, 'ml_train_1_data.json')
+ML_TRAIN, ML_VALIDATION, ML_TEST = [
+    'split_%s' % s for s in ('train', 'validation', 'test')]
 
 
 def get_lag_columns(lag_days):
@@ -64,14 +68,12 @@ def make_info_file(data):
         'mean': data[normalize_cols].values.mean(),
         'std': data[normalize_cols].values.std(ddof=1),
     }
-    ds_data_fname = ML_DATASET.split('.')[0] + '_data.json'
-    with open(ds_data_fname, 'w') as f:
+    with open(ML_DATASET_INFO, 'w') as f:
         f.write(json.dumps(ds_data))
 
 
 def get_info_file():
-    ds_data_fname = ML_DATASET.split('.')[0] + '_data.json'
-    return json.load(ds_data_fname)
+    return json.load(ML_DATASET_INFO)
 
 
 if __name__ == '__main__':
