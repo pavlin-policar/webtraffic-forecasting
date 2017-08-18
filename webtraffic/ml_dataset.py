@@ -20,7 +20,7 @@ def get_lag_columns(lag_days):
     return list(reversed(['lag_%d' % i for i in range(1, lag_days + 1)]))
 
 
-def prepare(fname, n_last_days, lag_days=30, make_split=True):
+def prepare(fname=False, n_last_days=40, lag_days=30):
     data = pd.read_csv(fname or TRAIN_DATA)
 
     date_columns = get_date_columns(data)
