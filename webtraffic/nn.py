@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from os import makedirs
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
@@ -68,11 +69,15 @@ def compute_loss(data, y_data, criterion, model):
     return np.mean(losses)
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.tar'):
-    fname = join(MODELS_DIR, filename)
-    torch.save(state, fname)
+def save_checkpoint(model_name, state, is_best):
+    model_dir = join(MODELS_DIR, model_name)
+    if not exists(model_dir):
+        makedirs(model_dir)
+
+    checkpoint_fname = join(model_dir, 'checkpoint.tar')
+    torch.save(state, checkpoint_fname)
     if is_best:
-        shutil.copyfile(fname, join(MODELS_DIR, 'model_best.tar'))
+        shutil.copyfile(checkpoint_fname, join(model_dir, 'model_best.tar'))
 
 
 def load_data(data):
@@ -126,13 +131,13 @@ def load_data(data):
     return data
 
 
-def train_model():
+def train_model(name):
     train, y_train = load_data(pd.read_csv(ML_TRAIN))
     val, y_val = load_data(pd.read_csv(ML_VALIDATION))
 
     model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
@@ -166,7 +171,7 @@ def train_model():
         # Save checkpoint model and best model
         is_best = validation_loss < best_loss
         best_loss = min(validation_loss, best_loss)
-        save_checkpoint({
+        save_checkpoint(name, {
             'epoch': epoch + 1,
             'state_dict': model.state_dict(),
             'best_loss': best_loss,
@@ -176,8 +181,8 @@ def train_model():
         print('[%2d/%d] Training loss: %.4f - Validation loss: %.4f' %
               (epoch + 1, N_EPOCHS, training_loss, validation_loss))
 
-    plt.plot(list(range(len(training_losses))), training_losses)
-    plt.plot(list(range(len(validation_losses))), validation_losses)
+    plt.plot(list(range(len(training_losses))), np.log(training_losses))
+    plt.plot(list(range(len(validation_losses))), np.log(validation_losses))
     plt.show()
 
 
@@ -187,7 +192,7 @@ def make_lag_test_set(lag_days=LAG_DAYS):
     data[columns].to_csv(lag_test_set_fname(lag_days), index=False)
 
 
-def make_prediction():
+def make_prediction(model_checkpoint):
     test_data = pd.read_csv(TEST_DATA)
     test_ids = dict(zip(test_data['Page'], test_data['Id']))
     # Extract date and page to own columns
@@ -231,7 +236,7 @@ def make_prediction():
         # since we don't know the number of features in advance
         if model is None:
             model = get_model(tmp.shape[1], 1).cuda()
-            checkpoint = torch.load(join(MODELS_DIR, 'model_best.tar'))
+            checkpoint = torch.load(model_checkpoint)
             model.load_state_dict(checkpoint['state_dict'])
 
         # Make predictions
