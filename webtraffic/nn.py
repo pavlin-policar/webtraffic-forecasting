@@ -15,7 +15,7 @@ from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
 from data_provider import MODELS_DIR, TEST_DATA, prepare_test_data, TRAIN_DATA, \
     get_date_columns
 from ml_dataset import ML_VALIDATION, ML_TRAIN, get_info_file, LAG_DAYS, \
-    lag_test_set_fname
+    lag_test_set_fname, get_lag_columns
 
 N_EPOCHS = 20
 BATCH_SIZE = 512
@@ -73,10 +73,17 @@ def save_checkpoint(state, is_best, filename='checkpoint.tar'):
 
 
 def load_data(data):
+    # Flags to indicate type of data
+    training = 'Visits' in data
+    testing = not training
+
     data_info = get_info_file()
 
     # Normalize the data
-    normalize_cols = data_info['normalize_columns']
+    normalize_cols = data_info['normalize_cols']
+    if testing:
+        normalize_cols.remove('Visits')
+
     data[normalize_cols] -= data_info['mean']
     data[normalize_cols] /= data_info['std']
 
@@ -84,17 +91,27 @@ def load_data(data):
     data['date'] = data['date'].astype('datetime64[ns]')
 
     # # Add some extra helpful features
-    def category(result):
-        return pd.Series(result, dtype='category')
+    def category(result, **kwargs):
+        return pd.Categorical(result, **kwargs)
 
-    data['day_of_week'] = category(data.date.dt.dayofweek)
-    data['weekend'] = category(data.date.dt.dayofweek // 5 == 1)
+    data['day_of_week'] = category(
+        data.date.dt.dayofweek, categories=[0, 1, 2, 3, 4, 5, 6]
+    )
+    data['weekend'] = category(
+        data.date.dt.dayofweek // 5 == 1, categories=[True, False]
+    )
 
     data[['title', 'lang', 'access', 'agent']] = data['Page'].str.extract(
         '(.+)_(\w{2})\.wikipedia\.org_([^_]+)_([^_]+)')
-    data['lang'] = data['lang'].astype('category')
-    data['access'] = data['access'].astype('category')
-    data['agent'] = data['agent'].astype('category')
+    data['lang'] = data['lang'].astype(
+        'category', categories=['de', 'en', 'es', 'fr', 'ja', 'ru', 'zh']
+    )
+    data['access'] = data['access'].astype(
+        'category', categories=['all-access', 'desktop', 'mobile-web']
+    )
+    data['agent'] = data['agent'].astype(
+        'category', categories=['all-agents', 'spider']
+    )
 
     # Remove columns that we won't use for training
     data.drop(['Page', 'title', 'date'], inplace=True, axis=1)
@@ -102,9 +119,12 @@ def load_data(data):
     # Prepare the data for training
     data = pd.get_dummies(data).astype(np.float32)
 
-    y_data = data.pop('Visits')
-
-    return data, y_data
+    # If training data, we will have access to the `Visits` column
+    if training:
+        y_data = data.pop('Visits')
+        return data, y_data
+    # Otherwise, assume test data and return that
+    return data
 
 
 def train_model():
@@ -177,7 +197,6 @@ def make_prediction():
     test_data['Page'] = test_data['Page'].apply(lambda a: a[:-11])
 
     test_dates = test_data['date'].unique()
-    print(test_dates)
     test_data = pd.DataFrame(
         index=test_data['Page'].unique(),
         columns=test_dates,
@@ -190,9 +209,34 @@ def make_prediction():
     del test_data
     del lag_test_set
 
-    # print(data)
+    model = None
+    date_columns = get_date_columns(data)
+    for date in test_dates:
+        # Find the lag columns to be used in predicting this particular date
+        date_idx = date_columns.index(date)
+        lag_columns = date_columns[date_idx - LAG_DAYS:date_idx]
+        lag_column_names = get_lag_columns(LAG_DAYS)
 
-    input()
+        # Prepare the dataframe for prediction
+        tmp = data[['Page'] + lag_columns]
+        # Impute missing values to the best of our ability
+        rolling_median = tmp[lag_columns].rolling(window=5).median()
+        tmp.fillna(rolling_median, inplace=True)
+        tmp.fillna(0, inplace=True)
+
+        tmp['date'] = date
+        tmp = tmp.rename(columns=dict(zip(lag_columns, lag_column_names)))
+        tmp = load_data(tmp)
+        print(tmp.columns)
+
+        # Load up the model if running first time, we need to do this here
+        # since we don't know the number of features in advance
+        if model is None:
+            model = NeuralNet(tmp.shape[1], 1).cuda()
+            checkpoint = torch.load(join(MODELS_DIR, 'model_best.tar'))
+            model.load_state_dict(checkpoint['state_dict'])
+        print(model)
+        break
 
 
 if __name__ == '__main__':

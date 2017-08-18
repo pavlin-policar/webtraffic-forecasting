@@ -95,7 +95,8 @@ def make_info_file(data):
 
 
 def get_info_file():
-    return json.load(ML_DATASET_INFO)
+    with open(ML_DATASET_INFO, 'r') as f:
+        return json.load(f)
 
 
 def lag_test_set_fname(lag_days=LAG_DAYS):
