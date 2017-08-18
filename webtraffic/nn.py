@@ -1,5 +1,4 @@
 import shutil
-import sys
 from os.path import join, exists
 
 import fire
@@ -80,12 +79,12 @@ def load_data(data):
     # Flags to indicate type of data
     training = 'Visits' in data
 
-    data_info = get_info_file()
+    # data_info = get_info_file()
 
     # Normalize the data
-    normalize_cols = get_lag_columns(LAG_DAYS)
-    data[normalize_cols] -= data_info['mean']
-    data[normalize_cols] /= data_info['std']
+    # normalize_cols = get_lag_columns(LAG_DAYS)
+    # data[normalize_cols] -= data_info['mean']
+    # data[normalize_cols] /= data_info['std']
 
     # Set correct dtypes
     data['date'] = data['date'].astype('datetime64[ns]')
@@ -131,18 +130,16 @@ def train_model():
     train, y_train = load_data(pd.read_csv(ML_TRAIN))
     val, y_val = load_data(pd.read_csv(ML_VALIDATION))
 
-    print(train, y_train)
-
     model = get_model(train.shape[1], 1).cuda()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=0)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
 
     for epoch in range(N_EPOCHS):
         # Train on minibatches
-        model.train(True)
+        model.train()
         for batch_idx in BatchSampler(RandomSampler(train), BATCH_SIZE, False):
             x, y = train.iloc[batch_idx], y_train.iloc[batch_idx]
             x = Variable(torch.from_numpy(x.values)).cuda()
@@ -244,16 +241,22 @@ def make_prediction():
             predictions[batch_idx] = model(x).cpu().data.numpy().reshape(-1)
         data[date] = predictions
 
-    # Rescale the data back to regular proportions
     predictions = data[['Page'] + list(test_dates)]
-    data_info = get_info_file()
-    predictions[test_dates] *= data_info['std']
-    predictions[test_dates] += data_info['mean']
+    # Rescale the data back to regular proportions
+    # data_info = get_info_file()
+    # predictions[test_dates] *= data_info['std']
+    # predictions[test_dates] += data_info['mean']
 
     flattened = pd.melt(predictions, id_vars='Page', var_name='date',
                         value_name='Visits')
 
-    flattened['Visits'] = np.floor(flattened['Visits'])
+    # Since SMAPE prefers under-estimates, floor the predictions and make sure
+    # no prediction is below 0
+    flattened['Visits'] = np.max(0, np.floor(flattened['Visits']))
+    below_zero_count = (flattened['Visits'] < 0).count()
+    if below_zero_count:
+        print('%d predictions were negative' % below_zero_count)
+
     # Merge the `Page` back into the original names in the key set
     flattened['Page'] = flattened['Page'].str.cat(flattened['date'], sep='_')
     flattened['Id'] = flattened['Page'].apply(test_ids.get)
