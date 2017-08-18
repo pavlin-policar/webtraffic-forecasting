@@ -172,15 +172,26 @@ def make_lag_test_set(lag_days=LAG_DAYS):
 def make_prediction():
     test_data = pd.read_csv(TEST_DATA)
     test_ids = dict(zip(test_data['Page'], test_data['Id']))
-    test_data = prepare_test_data(test_data)
+    # Extract date and page to own columns
+    test_data['date'] = test_data['Page'].apply(lambda a: a[-10:])
+    test_data['Page'] = test_data['Page'].apply(lambda a: a[:-11])
 
+    test_dates = test_data['date'].unique()
+    print(test_dates)
     test_data = pd.DataFrame(
         index=test_data['Page'].unique(),
-        columns=test_data['date'].unique(),
+        columns=test_dates,
     )
 
     lag_test_set = pd.read_csv(lag_test_set_fname(LAG_DAYS))
-    print(lag_test_set.join(test_data, on='Page'))
+    data = lag_test_set.join(test_data, on='Page')
+
+    # Free up some memory
+    del test_data
+    del lag_test_set
+
+    # print(data)
+
     input()
 
 
