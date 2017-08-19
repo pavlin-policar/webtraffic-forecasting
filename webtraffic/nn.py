@@ -18,7 +18,7 @@ from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
 from ml_dataset import ML_VALIDATION, ML_TRAIN, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
-N_EPOCHS = 500
+N_EPOCHS = 20
 BATCH_SIZE = 512
 
 
@@ -55,7 +55,7 @@ class NeuralNet(nn.Module):
 
 
 def get_model(input_size, output_size):
-    return NeuralNet(input_size, output_size)
+    return LinearRegression(input_size, output_size)
 
 
 def compute_loss(data, y_data, criterion, model):
@@ -278,8 +278,8 @@ def make_prediction(model_checkpoint):
                         value_name='Visits')
 
     # Since SMAPE prefers under-estimates, floor the predictions and make sure
-    # no prediction is below 0
-    flattened['Visits'] = np.floor(flattened['Visits']).clip(lower=0)
+    # no prediction is below 0. Keep as floats, since those seem to do better
+    flattened['Visits'] = flattened['Visits'].clip(lower=0)
     print('%d predictions were negative' % (flattened['Visits'] < 0).sum())
 
     # Merge the `Page` back into the original names in the key set
