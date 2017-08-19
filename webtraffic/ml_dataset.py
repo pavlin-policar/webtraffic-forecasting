@@ -36,10 +36,6 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     # Drop any columns where the target value is unknown
     flattened.dropna(how='any', inplace=True)
 
-    # Add lag columns to flattened
-    lag_columns = get_lag_columns(lag_days)
-    flattened = flattened.reindex(columns=list(flattened.columns) + lag_columns)
-
     date_indices = {d: i for i, d in enumerate(date_columns)}
 
     # We will need the original data page indices and to set the index to page
@@ -63,6 +59,7 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     # Set correct dtypes
     flattened['date'] = flattened['date'].astype('datetime64[ns]')
     flattened['Visits'] = flattened['Visits'].astype(np.float64)
+    lag_columns = get_lag_columns(lag_days)
     flattened[lag_columns] = flattened[lag_columns].astype(np.float64)
 
     # Create the appropriate files
