@@ -155,7 +155,7 @@ def train_model(name):
 
     model = get_model(train.shape[1], 1).cuda()
     criterion = SMAPE()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=1)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=20)
     best_loss = np.inf
 
@@ -203,8 +203,8 @@ def train_model(name):
               (epoch + 1, N_EPOCHS, training_loss, validation_loss))
 
     print('Best loss achieved: %.4f' % best_loss)
-    plt.plot(list(range(len(training_losses))), np.log(training_losses))
-    plt.plot(list(range(len(validation_losses))), np.log(validation_losses))
+    plt.plot(list(range(len(training_losses))), training_losses)
+    plt.plot(list(range(len(validation_losses))), validation_losses)
     plt.show()
 
 

@@ -30,9 +30,6 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
 
     flattened = pd.melt(used_data, id_vars='Page', var_name='date',
                         value_name='Visits')
-    # For convenience, sort the data by pages
-    flattened.sort_values(by='Page', inplace=True)
-    flattened.reset_index(inplace=True, drop=True)
     # Drop any columns where the target value is unknown
     flattened.dropna(how='any', inplace=True)
 
@@ -42,16 +39,18 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     data['page_indices'] = data.index
     data.set_index('Page', inplace=True)
 
-    page_indices = pd.DataFrame({
-        'Page': flattened['Page'],
-        'date_indices': flattened['date'].apply(date_indices.get),
-    }).set_index('Page').join(data['page_indices']).reset_index()
+    flattened['date_indices'] = flattened['date'].apply(date_indices.get)
+    flattened = flattened.set_index('Page').join(
+        data['page_indices']).reset_index()
 
     for lag in range(1, lag_days + 1):
         flattened['lag_%d' % lag] = data[date_columns].values[
-            page_indices['page_indices'],
-            page_indices['date_indices'] - lag
+            flattened['page_indices'],
+            flattened['date_indices'] - lag
         ]
+
+    # Remove columns used for indexing
+    flattened.drop(['page_indices', 'date_indices'], inplace=True, axis=1)
 
     # Since we're not lacking in training data, drop any row with NaN lag vars
     flattened.dropna(how='any', inplace=True)
@@ -71,7 +70,7 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
 
 def make_splits(data):
     split = np.split(
-        data.sample(frac=1), [int(.6 * len(data)), int(.8 * len(data))]
+        data.sample(frac=1), [int(.6 * len(data)), int(.95 * len(data))]
     )
     for dataset, fname in zip(split, (ML_TRAIN, ML_VALIDATION, ML_TEST)):
         dataset.to_csv(fname, index=False)
