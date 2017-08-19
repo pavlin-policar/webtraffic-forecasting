@@ -105,6 +105,8 @@ def load_data(data):
     # Rescale lag columns
     data[lag_columns] = data[lag_columns].sub(data['window_mean'], axis=0)
     data[lag_columns] = data[lag_columns].div(data['window_std'], axis=0)
+    # Since sometimes division produces NaNs, we'll replace those with 0s
+    data.fillna(0, inplace=True)
 
     # Set correct dtypes
     data['date'] = data['date'].astype('datetime64[ns]')
@@ -158,7 +160,7 @@ def load_data(data):
 class SMAPE(nn.Module):
     def forward(self, y_hat, y):
         denominator = (torch.abs(y) + torch.abs(y_hat)) / 200.
-        diff = torch.abs(y - y_hat) / denominator
+        diff = torch.abs(y_hat - y) / denominator
         diff[denominator == 0] = 0
         return torch.mean(diff)
 
@@ -168,7 +170,8 @@ def train_model(name):
     val, y_val = load_data(pd.read_csv(ML_VALIDATION))
 
     model = get_model(train.shape[1], 1).cuda()
-    criterion = SMAPE()
+    # criterion = SMAPE()
+    criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=0)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=10)
     best_loss = np.inf
