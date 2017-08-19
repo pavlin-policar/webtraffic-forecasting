@@ -141,12 +141,20 @@ def load_data(data):
     return data
 
 
+class SMAPE(nn.Module):
+    def forward(self, y_hat, y):
+        denominator = (torch.abs(y) + torch.abs(y_hat)) / 200.
+        diff = torch.abs(y - y_hat) / denominator
+        diff[denominator == 0] = 0
+        return torch.mean(diff)
+
+
 def train_model(name):
     train, y_train = load_data(pd.read_csv(ML_TRAIN))
     val, y_val = load_data(pd.read_csv(ML_VALIDATION))
 
     model = get_model(train.shape[1], 1).cuda()
-    criterion = nn.MSELoss()
+    criterion = SMAPE()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=0)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=20)
     best_loss = np.inf
