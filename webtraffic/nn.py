@@ -18,7 +18,7 @@ from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
 from ml_dataset import ML_VALIDATION, ML_TRAIN, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
-N_EPOCHS = 20
+N_EPOCHS = 100
 BATCH_SIZE = 512
 
 
@@ -34,20 +34,20 @@ class LinearRegression(nn.Module):
 class NeuralNet(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        hidden_size = 500
+        hidden_size = 100
         self.input = nn.Linear(input_size, hidden_size)
         self.output = nn.Linear(hidden_size, output_size)
         self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        # self.fc2 = nn.Linear(hidden_size, hidden_size)
         # self.fc3 = nn.Linear(hidden_size, hidden_size)
         self.selu = nn.SELU()
-        self.dropout = nn.Dropout(0.5)
+        # self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         out = self.selu(self.input(x))
         out = self.selu(self.fc1(out))
-        out = self.dropout(out)
-        out = self.selu(self.fc2(out))
+        # out = self.dropout(out)
+        # out = self.selu(self.fc2(out))
         # out = self.dropout(out)
         # out = self.selu(self.fc3(out))
         out = self.output(out)
@@ -88,12 +88,23 @@ def load_data(data):
     # Flags to indicate type of data
     training = 'Visits' in data
 
-    # data_info = get_info_file()
+    # Add global timeseries mean and median
+    ts_mean = pd.DataFrame(data.groupby('Page')['Visits'].mean())
+    ts_mean.columns = ['ts_mean']
 
-    # Normalize the data
-    # normalize_cols = get_lag_columns(LAG_DAYS)
-    # data[normalize_cols] -= data_info['mean']
-    # data[normalize_cols] /= data_info['std']
+    ts_median = pd.DataFrame(data.groupby('Page')['Visits'].median())
+    ts_median.columns = ['ts_median']
+
+    data = data.set_index('Page').join(ts_mean).join(ts_median).reset_index()
+
+    # Add local mean and median
+    lag_columns = get_lag_columns(LAG_DAYS)
+    data['window_mean'] = data[lag_columns].mean(axis=1)
+    data['window_std'] = data[lag_columns].std(axis=1)
+    data['window_median'] = data[lag_columns].median(axis=1)
+    # Rescale lag columns
+    data[lag_columns] = data[lag_columns].sub(data['window_mean'], axis=0)
+    data[lag_columns] = data[lag_columns].div(data['window_std'], axis=0)
 
     # Set correct dtypes
     data['date'] = data['date'].astype('datetime64[ns]')
@@ -108,8 +119,11 @@ def load_data(data):
     data['weekend'] = category(
         data.date.dt.dayofweek // 5 == 1, categories=[True, False]
     )
+    data['day'] = category(
+        data.date.dt.day, categories=list(range(1, 32))
+    )
     data['month'] = category(
-        data.date.dt.month, categories=list(range(12))
+        data.date.dt.month, categories=list(range(1, 13))
     )
     data['season'] = category(
         data.date.dt.month // 4, categories=list(range(4))
@@ -155,8 +169,8 @@ def train_model(name):
 
     model = get_model(train.shape[1], 1).cuda()
     criterion = SMAPE()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=1)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=20)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=0)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=10)
     best_loss = np.inf
 
     training_losses, validation_losses = [], []
