@@ -216,13 +216,6 @@ def train_model(name):
     plt.show()
 
 
-def make_lag_test_set(lag_days=LAG_DAYS):
-    data = pd.read_csv(TRAIN_DATA)
-    columns = ['Page'] + get_date_columns(data)[-lag_days:]
-    columns += ['ts_median', 'ts_mean', 'ts_std']
-    data[columns].to_csv(lag_test_set_fname(lag_days), index=False)
-
-
 def make_prediction(model_checkpoint):
     test_data = pd.read_csv(TEST_DATA)
     test_ids = dict(zip(test_data['Page'], test_data['Id']))

@@ -118,5 +118,20 @@ def lag_test_set_fname(lag_days=LAG_DAYS):
     return join(ML_DATASET_DIR, 'lag_test_set_%d.csv' % lag_days)
 
 
+def make_lag_test_set(lag_days=LAG_DAYS):
+    data = pd.read_csv(TRAIN_DATA)
+    date_columns = get_date_columns(data)
+
+    # Add global page median, mean and std
+    data['ts_median'] = data[date_columns].median(axis=1)
+    data['ts_mean'] = data[date_columns].mean(axis=1)
+    data['ts_std'] = data[date_columns].std(axis=1)
+
+    columns = ['Page'] + date_columns[-lag_days:]
+    columns += ['ts_median', 'ts_mean', 'ts_std']
+
+    data[columns].to_csv(lag_test_set_fname(lag_days), index=False)
+
+
 if __name__ == '__main__':
     fire.Fire()
