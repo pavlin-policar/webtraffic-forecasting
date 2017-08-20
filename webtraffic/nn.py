@@ -13,12 +13,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.sampler import RandomSampler, SequentialSampler, \
     BatchSampler
 
-from data_provider import MODELS_DIR, TEST_DATA, TRAIN_DATA, \
-    get_date_columns, save_predictions, PREDICTIONS_DIR
+from data_provider import MODELS_DIR, TEST_DATA, get_date_columns, \
+    save_predictions, PREDICTIONS_DIR
 from ml_dataset import ML_VALIDATION, ML_TRAIN, LAG_DAYS, \
     lag_test_set_fname, get_lag_columns
 
-N_EPOCHS = 100
+N_EPOCHS = 400
 BATCH_SIZE = 512
 
 
@@ -89,7 +89,7 @@ def load_data(data):
     training = 'Visits' in data
 
     # Add local mean and median
-    lag_columns = get_lag_columns(LAG_DAYS)
+    lag_columns = [c for c in data.columns if c.startswith('lag_')]
     data['window_mean'] = data[lag_columns].mean(axis=1)
     data['window_std'] = data[lag_columns].std(axis=1)
     data['window_median'] = data[lag_columns].median(axis=1)
@@ -99,7 +99,7 @@ def load_data(data):
     # Since sometimes division produces NaNs, we'll replace those with 0s
     data.fillna(0, inplace=True)
 
-    # Set correct dtypes
+    # Set date dtype, so we can easily extract features
     data['date'] = data['date'].astype('datetime64[ns]')
 
     # # Add some extra helpful features
@@ -123,7 +123,7 @@ def load_data(data):
     )
 
     data[['title', 'lang', 'access', 'agent']] = data['Page'].str.extract(
-        '(.+)_(\w{2})\.wikipedia\.org_([^_]+)_([^_]+)')
+        '(.+)_(\w{2})\.wikipedia\.org_([^_]+)_([^_]+)', expand=False)
     data['lang'] = data['lang'].astype(
         'category', categories=['de', 'en', 'es', 'fr', 'ja', 'ru', 'zh']
     )
@@ -163,7 +163,7 @@ def train_model(name):
     model = get_model(train.shape[1], 1).cuda()
     # criterion = SMAPE()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=0)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=0)
     scheduler = ReduceLROnPlateau(optimizer, 'min', verbose=True, patience=10)
     best_loss = np.inf
 
@@ -205,6 +205,7 @@ def train_model(name):
             'state_dict': model.state_dict(),
             'best_loss': best_loss,
             'optimizer': optimizer.state_dict(),
+            'columns': train.columns.tolist(),
         }, is_best)
 
         print('[%2d/%d] Training loss: %.4f - Validation loss: %.4f' %
@@ -238,6 +239,8 @@ def make_prediction(model_checkpoint):
     del lag_test_set
 
     model = None
+    checkpoint = torch.load(model_checkpoint)
+
     date_columns = get_date_columns(data)
     for date in test_dates:
         # Find the lag columns to be used in predicting this particular date
@@ -246,7 +249,7 @@ def make_prediction(model_checkpoint):
         lag_column_names = get_lag_columns(LAG_DAYS)
 
         # Prepare the dataframe for prediction
-        tmp = data[['Page'] + lag_columns]
+        tmp = data[['Page'] + lag_columns + ['ts_median', 'ts_mean', 'ts_std']]
         # Impute missing values to the best of our ability
         rolling_median = tmp[lag_columns].rolling(window=5).median()
         tmp.fillna(rolling_median, inplace=True)
@@ -256,11 +259,12 @@ def make_prediction(model_checkpoint):
         tmp = tmp.rename(columns=dict(zip(lag_columns, lag_column_names)))
         tmp = load_data(tmp)
 
+        tmp = tmp[checkpoint['columns']]
+
         # Load up the model if running first time, we need to do this here
         # since we don't know the number of features in advance
         if model is None:
             model = get_model(tmp.shape[1], 1).cuda()
-            checkpoint = torch.load(model_checkpoint)
             model.load_state_dict(checkpoint['state_dict'])
 
         # Make predictions
