@@ -23,6 +23,26 @@ def get_lag_columns(lag_days=LAG_DAYS):
 
 
 def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
+    """Prepare a dataset split that we can use with classical ml approaches.
+
+    Creates a dataset using each Page/date combination as a datapoint, adds
+    lag variables to each, and some other useful timeseries information.
+
+    Since this produces a ridiculous amount of datapoints, and memory is often
+    limited, we specify how many last days to use with the `n_last_days`
+    parameter.
+
+    Parameter
+    ---------
+    fname : Optional[int]
+        The file where the initial data is located. This data will be used
+        to generate the dataset.
+    n_last_days : Optional[int]
+        How many days (from the last date backwards) to turn into data points.
+    lag_days : Optional[int]
+        How many lag variables to generate for each datapoint.
+
+    """
     data = pd.read_csv(fname or TRAIN_DATA)
 
     date_columns = get_date_columns(data)
@@ -38,10 +58,10 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     # We will need the original data page indices and to set the index to page
     data['page_indices'] = data.index
     data.set_index('Page', inplace=True)
+    flattened.set_index('Page', inplace=True)
 
     flattened['date_indices'] = flattened['date'].apply(date_indices.get)
-    flattened = flattened.set_index('Page').join(
-        data['page_indices']).reset_index()
+    flattened = flattened.join(data['page_indices'])
 
     for lag in range(1, lag_days + 1):
         flattened['lag_%d' % lag] = data[date_columns].values[
@@ -55,6 +75,11 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     # Since we're not lacking in training data, drop any row with NaN lag vars
     flattened.dropna(how='any', inplace=True)
 
+    # Add page mean and median
+    flattened['ts_median'] = data.median(axis=1)
+    flattened['ts_mean'] = data.mean(axis=1)
+    flattened['ts_std'] = data.std(axis=1)
+
     # Set correct dtypes
     flattened['date'] = flattened['date'].astype('datetime64[ns]')
     flattened['Visits'] = flattened['Visits'].astype(np.float64)
@@ -62,7 +87,7 @@ def prepare(fname=False, n_last_days=40, lag_days=LAG_DAYS):
     flattened[lag_columns] = flattened[lag_columns].astype(np.float64)
 
     # Create the appropriate files
-    flattened.to_csv(ML_DATASET, index=False)
+    flattened.to_csv(ML_DATASET)
     train, *_ = make_splits(flattened)
 
     make_info_file(train, lag_days)
@@ -73,16 +98,15 @@ def make_splits(data):
         data.sample(frac=1), [int(.6 * len(data)), int(.95 * len(data))]
     )
     for dataset, fname in zip(split, (ML_TRAIN, ML_VALIDATION, ML_TEST)):
-        dataset.to_csv(fname, index=False)
+        dataset.to_csv(fname)
 
     return split
 
 
 def make_info_file(data, lag_days=LAG_DAYS):
-    values = data[get_lag_columns(lag_days)].values
-    ds_data = {'mean': values.mean(), 'std': values.std(ddof=1)}
+    # TODO Add things here as needed
     with open(ML_DATASET_INFO, 'w') as f:
-        f.write(json.dumps(ds_data))
+        f.write(json.dumps({}))
 
 
 def get_info_file():

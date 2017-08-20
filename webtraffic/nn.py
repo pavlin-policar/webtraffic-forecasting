@@ -88,15 +88,6 @@ def load_data(data):
     # Flags to indicate type of data
     training = 'Visits' in data
 
-    # Add global timeseries mean and median
-    ts_mean = pd.DataFrame(data.groupby('Page')['Visits'].mean())
-    ts_mean.columns = ['ts_mean']
-
-    ts_median = pd.DataFrame(data.groupby('Page')['Visits'].median())
-    ts_median.columns = ['ts_median']
-
-    data = data.set_index('Page').join(ts_mean).join(ts_median).reset_index()
-
     # Add local mean and median
     lag_columns = get_lag_columns(LAG_DAYS)
     data['window_mean'] = data[lag_columns].mean(axis=1)
@@ -228,6 +219,7 @@ def train_model(name):
 def make_lag_test_set(lag_days=LAG_DAYS):
     data = pd.read_csv(TRAIN_DATA)
     columns = ['Page'] + get_date_columns(data)[-lag_days:]
+    columns += ['ts_median', 'ts_mean', 'ts_std']
     data[columns].to_csv(lag_test_set_fname(lag_days), index=False)
 
 
